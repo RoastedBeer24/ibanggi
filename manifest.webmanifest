@@ -1,0 +1,16 @@
+{
+  "name": "이야기방",
+  "short_name": "이야기방",
+  "description": "개인용 캐릭터·세계관 롤플레이 챗봇",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12141f",
+  "theme_color": "#12141f",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
