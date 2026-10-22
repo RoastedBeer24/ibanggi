@@ -194,6 +194,27 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
 .ev-state{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--surface2);color:var(--muted)}
 .ev-state.due{background:var(--accent);color:var(--accent-ink)}
 .ev-state.done{color:var(--ok)}
+.tabs{display:flex;gap:4px;padding:0 max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line)}
+.tabs button{flex:1;border:0;background:transparent;padding:9px 6px;border-radius:10px;font-size:14px;color:var(--muted);font-weight:500}
+.tabs button[aria-selected="true"]{background:var(--surface2);color:var(--ink);font-weight:700}
+.tabs span{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.toolbar{display:flex;gap:8px;margin-bottom:10px}
+.toolbar > .in{flex:1;min-width:0}
+.toolbar select.in{flex:0 0 40%}
+.grp{border:1px solid var(--line);border-radius:14px;margin-bottom:10px;background:var(--bg);overflow:hidden}
+.grp > summary{list-style:none;display:flex;justify-content:space-between;align-items:center;padding:11px 14px;font-weight:700;font-size:14px;cursor:pointer}
+.grp > summary::-webkit-details-marker{display:none}
+.grp > summary span{font-weight:400;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.crow2{display:flex;align-items:center;gap:10px;width:100%;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;padding:9px 14px}
+.crow2 .ctext{flex:1;min-width:0}
+.crow2 .av{width:32px;height:32px;font-size:12px}
+.lrow{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:var(--bg)}
+.lrow > summary{list-style:none;padding:10px 12px;cursor:pointer;display:flex;gap:8px;align-items:center}
+.lrow > summary::-webkit-details-marker{display:none}
+.lrow > summary .ctext{flex:1;min-width:0}
+.lrow .card{border:0;border-top:1px solid var(--line);border-radius:0;margin:0}
+.badge{font-size:11px;padding:2px 7px;border-radius:99px;background:var(--surface2);color:var(--muted);flex:none}
+.more{width:100%;margin-top:4px}
 .split-item small{display:block;color:var(--muted);font-size:12px;margin-top:2px;white-space:pre-wrap}
 #lock{position:fixed;inset:0;z-index:50;background:var(--bg);display:grid;place-items:center;
   padding:calc(24px + env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(24px,env(safe-area-inset-left,0px))}
@@ -394,6 +415,7 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
     <div class="panel-head"><h2>비밀·떡밥</h2><div class="btns"><button class="btn" id="secFind" type="button">설정에서 찾기</button><button class="btn primary" id="secAdd" type="button">+ 추가</button></div></div>
     <div class="panel-body">
       <div class="hint" style="margin-bottom:12px">숨겨진 사실과 누가 알고 있는지를 기록해요. 매 답변에 함께 보내서 비밀이 엉뚱하게 새지 않게 하고, 자동 요약 때 상태가 갱신돼요. '공통'은 이 캐릭터의 모든 대화에, '이 대화'는 지금 대화에만 있는 항목이에요.</div>
+      <input class="in" id="secQ" type="search" placeholder="비밀 검색" aria-label="비밀 검색" style="margin-bottom:10px">
       <div id="secFound"></div>
       <div id="secList"></div>
     </div>
@@ -486,7 +508,7 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
 <section class="sheet" id="shPc" aria-label="PC 목록">
   <div class="back" data-close="shPc"></div>
   <div class="panel">
-    <div class="panel-head"><h2>PC 목록</h2><button class="btn primary" id="pcAdd" type="button">+ 새 PC</button></div>
+    <div class="panel-head"><h2>PC 목록</h2><div class="btns"><button class="btn" id="genPc" type="button">AI로 만들기</button><button class="btn primary" id="pcAdd" type="button">+ 새 PC</button></div></div>
     <div class="panel-body">
       <div class="hint" style="margin-bottom:12px">내가 연기할 인물을 여러 명 만들어 두고, 캐릭터마다 기본 PC를 정하거나 대화마다 골라 쓸 수 있어요. {{user}}는 고른 PC의 이름으로 바뀌어요.</div>
       <div id="pcList"></div>
@@ -499,52 +521,109 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
   <div class="back" data-close="shEdit"></div>
   <div class="panel">
     <div class="panel-head"><h2 id="edTitle">캐릭터 편집</h2><button class="btn primary" id="edSave">저장</button></div>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="base" aria-selected="true">설정</button>
+      <button type="button" role="tab" data-tab="cast" aria-selected="false">인물 <span id="tabCastN"></span></button>
+      <button type="button" role="tab" data-tab="lore" aria-selected="false">사전 <span id="tabLoreN"></span></button>
+    </div>
     <div class="panel-body">
-      <div class="split">
-        <div class="field"><label class="lbl" for="edName">이름</label><input class="in" id="edName" maxlength="40"></div>
-        <div class="field"><label class="lbl" for="edAv">아이콘 (글자 1~2개)</label><div class="row"><input class="in" id="edAv" maxlength="4"><button class="photo-btn" id="edImg" type="button" aria-label="캐릭터 사진">사진</button></div><button class="btn sm" id="edImgDel" type="button" hidden>사진 지우기</button></div>
-      </div>
-      <div class="field">
-        <label class="lbl" for="edPrompt">캐릭터·세계관 설정</label>
-        <textarea class="in" id="edPrompt" rows="14" placeholder="세계관, 말투, 규칙을 자유롭게 적으세요."></textarea>
-        <div class="hint">{{char}}는 캐릭터 이름, {{user}}는 PC 이름으로 바뀌어요. 매 요청마다 시스템 지시문으로 들어가요.</div>
-      </div>
-      <div class="field">
-        <label class="lbl" for="edGreet">첫 장면 (선택)</label>
-        <textarea class="in" id="edGreet" rows="4" placeholder="비워 두면 새 대화에서 'AI가 첫 장면 쓰기'를 누를 수 있어요."></textarea>
-      </div>
-
-      <hr>
-      <div class="sec" id="pcSec">PC</div>
-      <div class="field">
-        <label class="lbl" for="edPc">이 캐릭터의 기본 PC</label>
-        <div class="row"><select class="in" id="edPc"></select><button class="btn" type="button" id="edPcList">PC 목록</button></div>
-        <div class="hint">새 대화는 이 PC로 시작해요. 대화마다 유저 노트에서 바꿀 수 있어요.</div>
-      </div>
-
-      <hr>
-      <div class="sec">등장인물 카드</div>
-      <div class="hint" style="margin-bottom:10px">인물마다 카드를 두면, 장면에 있거나 최근 대화에 이름이 나온 인물만 자세히 보내고 나머지는 한 줄 소개만 보내요. 대사 색과 사진도 카드에서 정해요.</div>
-      <div id="castList"></div>
-      <div class="btns" style="margin-bottom:22px">
-        <button class="btn" id="castAdd" type="button">+ 인물 추가</button>
-        <button class="btn" id="castSplit" type="button">설정 글에서 인물 나누기</button>
-        <button class="btn danger" id="castRevert" type="button">나누기 전으로 되돌리기</button>
+      <div data-pane="base">
+        <div class="split">
+          <div class="field"><label class="lbl" for="edName">이름</label><input class="in" id="edName" maxlength="40"></div>
+          <div class="field"><label class="lbl" for="edAv">아이콘 (글자 1~2개)</label><div class="row"><input class="in" id="edAv" maxlength="4"><button class="photo-btn" id="edImg" type="button" aria-label="캐릭터 사진">사진</button></div><button class="btn sm" id="edImgDel" type="button" hidden>사진 지우기</button></div>
+        </div>
+        <div class="field">
+          <div class="row" style="justify-content:space-between"><label class="lbl" for="edPrompt">캐릭터·세계관 설정</label><button class="btn sm" type="button" id="genWorld">AI로 작성</button></div>
+          <textarea class="in" id="edPrompt" rows="14" placeholder="세계관, 말투, 규칙을 자유롭게 적으세요. 'AI로 작성'에 설명과 키워드만 넣어도 초안을 써 줘요."></textarea>
+          <div class="hint">{{char}}는 캐릭터 이름, {{user}}는 PC 이름으로 바뀌어요. 매 요청마다 시스템 지시문으로 들어가요.</div>
+        </div>
+        <div class="field">
+          <label class="lbl" for="edGreet">첫 장면 (선택)</label>
+          <textarea class="in" id="edGreet" rows="4" placeholder="비워 두면 새 대화에서 'AI가 첫 장면 쓰기'를 누를 수 있어요."></textarea>
+        </div>
+        <div class="field" id="pcSec">
+          <label class="lbl" for="edPc">이 캐릭터의 기본 PC</label>
+          <div class="row"><select class="in" id="edPc"></select><button class="btn" type="button" id="edPcList">PC 목록</button></div>
+          <div class="hint">새 대화는 이 PC로 시작해요. 대화마다 유저 노트에서 바꿀 수 있어요.</div>
+        </div>
+        <hr>
+        <div class="btns">
+          <button class="btn" id="edExport" type="button">이 캐릭터 내보내기</button>
+          <button class="btn" id="edLink" type="button">세이브 링크 복사</button>
+          <button class="btn danger" id="edDel">캐릭터 삭제</button>
+        </div>
+        <div class="hint" style="margin-top:10px">내보내기에는 설정, 인물, 사전, 비밀, 기본 PC가 들어가요. 대화는 들어가지 않아요.</div>
       </div>
 
-      <hr>
-      <div class="sec">설정 사전</div>
-      <div class="hint" style="margin-bottom:10px">최근 대화에 키워드가 나오면 그 항목만 함께 보내요. 장소, 조연, 학교, 회사처럼 가끔 필요한 설정을 넣어 두세요. '항상'을 켜면 매번 보내고, '규칙으로 강조'를 켜면 지시문 맨 끝에 반드시 지킬 규칙으로 넣어요.</div>
-      <div id="loreList"></div>
-      <div class="btns" style="margin-bottom:22px"><button class="btn" id="loreAdd" type="button">+ 항목 추가</button></div>
-
-      <div class="btns">
-        <button class="btn primary" id="edSave2">저장</button>
-        <button class="btn" id="edExport" type="button">이 캐릭터 내보내기</button>
-        <button class="btn" id="edLink" type="button">세이브 링크 복사</button>
-        <button class="btn danger" id="edDel">캐릭터 삭제</button>
+      <div data-pane="cast" hidden>
+        <div class="hint" style="margin-bottom:10px">장면에 있거나 최근 대화에 이름이 나온 인물만 자세히 보내요. 인물이 20명을 넘으면 나머지는 이름과 소속 명단만 보내요.</div>
+        <div class="toolbar">
+          <input class="in" id="castQ" type="search" placeholder="이름·소속 검색" aria-label="인물 검색">
+          <select class="in" id="castG" aria-label="소속"></select>
+        </div>
+        <div class="btns" style="margin-bottom:12px">
+          <button class="btn primary" id="genCast" type="button">AI로 인물 만들기</button>
+          <button class="btn" id="castAdd" type="button">+ 직접 추가</button>
+          <button class="btn" id="castSplit" type="button">설정 글에서 나누기</button>
+          <button class="btn danger" id="castRevert" type="button">나누기 되돌리기</button>
+        </div>
+        <div id="castList"></div>
       </div>
-      <div class="hint" style="margin-top:10px">내보내기 파일에는 캐릭터 설정, 설정 사전, 기본 PC가 들어가요. 대화는 들어가지 않아요. 다른 기기에서 캐릭터 목록의 '가져오기'로 넣으면 기존 데이터에 더해져요.</div>
+
+      <div data-pane="lore" hidden>
+        <div class="hint" style="margin-bottom:10px">최근 대화에 키워드가 나오면 그 항목만 함께 보내요. '항상'은 매번, '규칙으로 강조'는 지시문 끝에 반드시 지킬 규칙으로 넣어요.</div>
+        <div class="toolbar"><input class="in" id="loreQ" type="search" placeholder="키워드·내용 검색" aria-label="사전 검색"><button class="btn" id="loreAdd" type="button">+ 항목</button></div>
+        <div id="loreList"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 인물 카드 편집 -->
+<section class="sheet" id="shCast" aria-label="인물 카드">
+  <div class="back" data-close="shCast"></div>
+  <div class="panel">
+    <div class="panel-head"><h2 id="ckTitle">인물 카드</h2><button class="btn primary" type="button" data-close="shCast">완료</button></div>
+    <div class="panel-body">
+      <div class="row" style="align-items:flex-start;margin-bottom:12px">
+        <button class="photo-btn" type="button" id="ckImg">사진</button>
+        <div style="flex:1;display:grid;gap:8px;min-width:0">
+          <input class="in" id="ckName" placeholder="이름" aria-label="이름">
+          <input class="in" id="ckAliases" placeholder="부르는 이름·별칭 (쉼표로 구분)" aria-label="부르는 이름">
+        </div>
+      </div>
+      <div class="field"><label class="lbl" for="ckGroup">소속</label><input class="in" id="ckGroup" list="groupList" placeholder="예: 히어로 협회"><datalist id="groupList"></datalist></div>
+      <div class="field"><span class="lbl">대사 색</span><div class="swatches" id="ckColors"></div></div>
+      <div class="field"><label class="lbl" for="ckShort">한 줄 소개</label><input class="in" id="ckShort"></div>
+      <div class="field"><label class="lbl" for="ckDetail">자세한 설정</label><textarea class="in" id="ckDetail" rows="16"></textarea></div>
+      <label class="check" style="margin-bottom:14px"><input type="checkbox" id="ckAlways"> 항상 자세히 보내기</label>
+      <div class="btns"><button class="btn sm" type="button" id="ckNoImg" hidden>사진 지우기</button><button class="btn danger" type="button" id="ckDel">카드 삭제</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- AI로 만들기 -->
+<section class="sheet" id="shGen" aria-label="AI로 만들기">
+  <div class="back" data-close="shGen"></div>
+  <div class="panel">
+    <div class="panel-head"><h2 id="genTitle">AI로 만들기</h2><button class="btn" type="button" data-close="shGen">닫기</button></div>
+    <div class="panel-body">
+      <div class="hint" id="genHint" style="margin-bottom:12px"></div>
+      <div class="field" id="genCtxRow"><label class="lbl" for="genCtx">참고할 세계관</label><select class="in" id="genCtx"></select></div>
+      <div class="field"><label class="lbl" for="genDesc">설명</label><textarea class="in" id="genDesc" rows="4"></textarea></div>
+      <div class="field"><label class="lbl" for="genKeys">키워드 (쉼표로 구분)</label><input class="in" id="genKeys"></div>
+      <div class="field" id="genGroupRow"><label class="lbl" for="genGroup">소속 (선택)</label><input class="in" id="genGroup" list="groupList"></div>
+      <div class="field"><label class="lbl" for="genModelIn">작성 모델</label><input class="in" id="genModelIn" list="modelList" autocapitalize="off" spellcheck="false"><div class="hint" id="genModelHint"></div></div>
+      <div class="btns" style="margin-bottom:16px"><button class="btn primary" type="button" id="genGo">작성하기</button></div>
+      <div id="genOut" hidden>
+        <hr>
+        <div class="sec">결과 (고쳐서 쓸 수 있어요)</div>
+        <div class="field" id="genNameRow"><label class="lbl" for="genName">이름</label><input class="in" id="genName"></div>
+        <div class="field" id="genAliasRow"><label class="lbl" for="genAliases">부르는 이름</label><input class="in" id="genAliases"></div>
+        <div class="field" id="genShortRow"><label class="lbl" for="genShort">한 줄 소개</label><input class="in" id="genShort"></div>
+        <div class="field"><label class="lbl" for="genText" id="genTextLbl">내용</label><textarea class="in" id="genText" rows="14"></textarea></div>
+        <div class="btns"><button class="btn primary" type="button" id="genApply">추가</button><button class="btn" type="button" id="genApply2" hidden>설정 글 끝에 덧붙이기</button><button class="btn" type="button" id="genRetry">다시 작성</button></div>
+      </div>
     </div>
   </div>
 </section>
@@ -590,6 +669,10 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
       <div class="field">
         <label class="lbl" for="fSumModel">요약용 모델 (비우면 위와 같은 모델)</label>
         <input class="in" id="fSumModel" list="modelList" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label class="lbl" for="fGenModel">작성용 모델 (AI로 인물·PC·설정 만들기, 비우면 대화 모델)</label>
+        <input class="in" id="fGenModel" list="modelList" autocapitalize="off" spellcheck="false">
       </div>
       <div class="field" id="rowThink">
         <label class="lbl" for="fThink">생각 수준 (Gemini)</label>
@@ -925,7 +1008,7 @@ function costOf(m, u){
   return ((u.input_tokens||0)*pi + (u.output_tokens||0)*po + (u.cache_creation_input_tokens||0)*pw + (u.cache_read_input_tokens||0)*pr) / 1e6;
 }
 const DEF = {provider:'gemini', keys:{}, models:{}, sumModel:'', customBase:'', temp:1, maxTokens:8192,
-  sceneTrack:true, pcGuard:true, pcAuto:false, safety:'BLOCK_NONE', thinking:'low', claudeEffort:'medium', relockMin:5, lastBackup:0, usage:{usd:0, calls:0, since:0}, userName:'나', userDesc:'', defaultPc:'',
+  sceneTrack:true, genModel:'', pcGuard:true, pcAuto:false, safety:'BLOCK_NONE', thinking:'low', claudeEffort:'medium', relockMin:5, lastBackup:0, usage:{usd:0, calls:0, since:0}, userName:'나', userDesc:'', defaultPc:'',
   interval:30, maxRecent:80, overlap:6, compactChars:6000, autoBackup:false,
   font:16.5, enterSend:false};
 
@@ -994,9 +1077,9 @@ function normalize(st){
     prompt:String(c.prompt || ''), greeting:String(c.greeting || ''),
     pcName:String(c.pcName || ''), persona:String(c.persona || ''), pcId:String(c.pcId || ''), note:String(c.note || ''),
     lore:Array.isArray(c.lore) ? c.lore.map(l => ({id:l.id || uid(), keys:String(l.keys || ''), text:String(l.text || ''), always:!!l.always, pin:!!l.pin})) : [],
-    cast:Array.isArray(c.cast) ? c.cast.map((k, i) => ({id:String(k.id || uid()), name:String(k.name || '이름 없음'), aliases:String(k.aliases || ''), color:Number.isInteger(k.color) ? k.color % 8 : i % 8,
+    cast:Array.isArray(c.cast) ? c.cast.map((k, i) => ({id:String(k.id || uid()), name:String(k.name || '이름 없음'), aliases:String(k.aliases || ''), group:String(k.group || ''), color:Number.isInteger(k.color) ? k.color % 8 : i % 8,
       img:String(k.img || ''), short:String(k.short || ''), detail:String(k.detail || ''), always:!!k.always, fromSplit:!!k.fromSplit})) : [],
-    secrets:Array.isArray(c.secrets) ? c.secrets.map(x => ({id:String(x.id || uid()), title:String(x.title || ''), detail:String(x.detail || ''), knownBy0:String(x.knownBy0 || '')})) : [],
+    secrets:Array.isArray(c.secrets) ? c.secrets.map(x => ({id:String(x.id || uid()), title:String(x.title || ''), detail:String(x.detail || ''), knownBy0:String(x.knownBy0 || ''), owner:String(x.owner || '')})) : [],
     img:String(c.img || ''), promptBackup:String(c.promptBackup || ''),
     session:c.session || null
   }));
@@ -1219,14 +1302,21 @@ function hideErr(){ $('#err').hidden = true; errRetryFn = null; }
 
 /* ================= 등장인물 · 장면 · 비밀 ================= */
 function aliasesOf(k){
-  const a = [k.name.trim()];
-  const parts = k.name.trim().split(/\s+/); if(parts.length > 1) a.push(parts[parts.length - 1]);
-  k.aliases.split(/[,，]/).map(x => x.trim()).filter(Boolean).forEach(x => a.push(x));
-  return [...new Set(a.filter(x => x.length >= 1))];
+  if(k._al && k._alKey === k.name + '|' + k.aliases) return k._al.slice();
+  const n = k.name.trim(), a = [n];
+  const parts = n.split(/\s+/);
+  if(parts.length > 1 && parts[parts.length - 1].length >= 2) a.push(parts[parts.length - 1]);
+  if(/^[가-힣]{3}$/.test(n)) a.push(n.slice(1));
+  k.aliases.split(/[,，]/).map(x => x.trim()).filter(x => x.length >= 2).forEach(x => a.push(x));
+  const out = [...new Set(a.filter(x => x.length >= 1))];
+  try{ Object.defineProperty(k, '_al', {value:out, writable:true, configurable:true, enumerable:false}); Object.defineProperty(k, '_alKey', {value:k.name + '|' + k.aliases, writable:true, configurable:true, enumerable:false}); }catch(e){}
+  return out.slice();
 }
+const BIG_CAST = 20;
 function castFind(c, name){
-  name = String(name || '').trim(); if(!name) return null;
-  return c.cast.find(k => aliasesOf(k).some(a => a === name || name.includes(a) || a.includes(name))) || null;
+  name = String(name || '').trim(); if(name.length < 2) return null;
+  const exact = c.cast.find(k => aliasesOf(k).includes(name)); if(exact) return exact;
+  return c.cast.find(k => aliasesOf(k).some(a => a.length >= 2 && (name.includes(a) || a.includes(name)))) || null;
 }
 const SCENE_RE = /\[\[\s*장면\s*[:：]([^\]]*)\]\]/;
 const EVENT_RE = /\[\[\s*사건\s*[:：]\s*([^\]]*)\]\]/g;
@@ -1257,7 +1347,7 @@ function activeCast(c, s, prior, extra){
   if(!c.cast.length) return {on:[], off:[]};
   const sc = currentScene(s);
   const hay = prior.slice(-4).map(m => m.text).concat(extra ? [extra] : []).join('\n');
-  if(!sc) return {on:c.cast.slice(), off:[]};
+  if(!sc && c.cast.length <= BIG_CAST) return {on:c.cast.slice(), off:[]};
   const on = c.cast.filter(k => k.always || (sc && sc.people.some(p => castFind(c, p) === k)) || aliasesOf(k).some(a => hay.includes(a)));
   return {on, off:c.cast.filter(k => !on.includes(k))};
 }
@@ -1429,10 +1519,15 @@ function systemParts(s, prior, extra){
   const recentTexts = prior.slice(-6).map(x => x.text).concat(extra ? [extra] : []);
   const ac = activeCast(c, s, prior, extra);
   if(ac.on.length) parts.push('[등장인물 — 자세한 설정]\n' + ac.on.map(k => '## ' + k.name + '\n' + expand(k.detail, c, s).trim()).join('\n\n'));
-  if(ac.off.length) parts.push('[그 밖의 인물 — 지금 장면에 없음. 부르거나 자연스러운 계기가 있을 때만 등장]\n' + ac.off.map(k => '- ' + k.name + (k.short ? ': ' + expand(k.short, c, s) : '')).join('\n'));
+  if(ac.off.length && c.cast.length > BIG_CAST){
+    const groups = {};
+    ac.off.forEach(k => { const g = k.group || '기타'; (groups[g] = groups[g] || []).push(k.name + (k.aliases ? '(' + k.aliases.split(/[,，]/)[0].trim() + ')' : '')); });
+    parts.push('[등장인물 명단 — 지금 장면에 없는 인물. 장소와 상황에 맞을 때만 자연스럽게 등장시킨다. 등장시키면 다음 답변부터 자세한 설정이 함께 온다]\n' + Object.keys(groups).map(g => '- ' + g + ': ' + groups[g].join(', ')).join('\n'));
+  } else if(ac.off.length) parts.push('[그 밖의 인물 — 지금 장면에 없음. 부르거나 자연스러운 계기가 있을 때만 등장]\n' + ac.off.map(k => '- ' + k.name + (k.short ? ': ' + expand(k.short, c, s) : '')).join('\n'));
   const sc = currentScene(s);
   if(sc && (sc.time || sc.place || sc.people.length)) parts.push('[현재 장면]\n' + (sc.time ? '시간: ' + sc.time + '\n' : '') + (sc.place ? '장소: ' + sc.place + '\n' : '') + (sc.people.length ? '장면에 있는 인물: ' + sc.people.join(', ') : ''));
-  const secs = secretList(c, s);
+  const onIds = new Set(ac.on.map(k => k.id));
+  const secs = secretList(c, s).filter(x => !x.owner || onIds.has(x.owner) || x.st.status !== 'hidden');
   if(secs.length) parts.push('[비밀과 떡밥 — 상태를 지켜라]\n숨김 상태인 비밀은 이야기 속에서 자연스러운 계기 없이 드러내지 않는다. 아는 사람으로 적힌 인물만 그 사실을 안다.\n'
     + secs.map(x => '- ' + x.title + (x.detail ? ': ' + x.detail : '') + ' (상태: ' + SECRET_LABEL[x.st.status] + ' · 아는 사람: ' + (x.st.knownBy || '없음') + ')').join('\n'));
   const evs = eventsFor(s, prior);
@@ -1760,7 +1855,11 @@ async function summarize(s, manual){
   if(manual) toast('요약하는 중이에요. 대화는 계속해도 돼요');
   const t0 = turnCount(msgs, from - 1) + 1, t1 = turnCount(msgs, end);
   const lastChunk = s.mem.chunks[s.mem.chunks.length - 1];
-  const secs = secretList(c, s);
+  const tr = transcript(c, slice, s);
+  const secs = secretList(c, s).filter(x => {
+    if(!x.owner || x.st.status !== 'hidden') return true;
+    const k = c.cast.find(z => z.id === x.owner); return !k || aliasesOf(k).some(a => tr.includes(a));
+  });
   const secBlock = secs.length ? '[비밀 목록]\n' + secs.map((x, i) => 'S' + (i + 1) + '. ' + x.title + (x.detail ? ': ' + x.detail : '') + ' (현재: ' + SECRET_LABEL[x.st.status] + ', 아는 사람: ' + (x.st.knownBy || '없음') + ')').join('\n') + '\n\n' : '';
   const prompt = secBlock +
     '[이전 현재 상황 정리]\n' + (s.mem.state.trim() || '(없음)') + '\n\n'
@@ -1997,7 +2096,7 @@ function openSheet(id){
   el.style.zIndex = String(20 + stack.length);
   el.classList.add('open'); stack.push(id);
   el.querySelector('.panel-body').scrollTop = 0;
-  try{ history.pushState({sheet:id}, ''); }catch(e){}
+  try{ history.pushState({sheet:id, depth:stack.length}, ''); }catch(e){}
 }
 function closeSheet(id){
   if(stack[stack.length-1] !== id) return;
@@ -2011,7 +2110,18 @@ function popTop(){
   if(['shSet','shMem','shNote','shPc','shScene','shStyle','shSecret','shEvent'].includes(id)){ renderHeader(); if(id !== 'shMem') renderLog(true); }
   if(id === 'shPc'){ if(stack.includes('shEdit')) fillEdPc(); if(stack.includes('shNote')) fillNote(); if(stack.includes('shSet')) fillDefPc(); }
 }
-window.addEventListener('popstate', () => { if(stack.length) popTop(); });
+window.addEventListener('popstate', () => {
+  const d = (history.state && typeof history.state.depth === 'number') ? history.state.depth - 0 : 0;
+  const keep = history.state && history.state.sheet ? d : 0;
+  while(stack.length > keep) popTop();
+});
+/* 위에서부터 n개의 시트를 한 번에 닫기 */
+function closeTopSheets(n){
+  n = Math.min(n, stack.length); if(n <= 0) return;
+  let pushed = false;
+  try{ pushed = !!(history.state && history.state.sheet === stack[stack.length - 1]); }catch(e){}
+  if(pushed) history.go(-n); else for(let i = 0; i < n; i++) popTop();
+}
 document.addEventListener('click', e => {
   const c = e.target.closest('[data-close]'); if(c) closeSheet(c.dataset.close);
   if(!e.target.closest('#menu') && !e.target.closest('#btnMenu')) $('#menu').hidden = true;
@@ -2048,43 +2158,76 @@ function renderEdImg(){
 }
 $('#edImg').onclick = async () => { const u = await pickImage(); if(u){ edImgVal = u; renderEdImg(); } };
 $('#edImgDel').onclick = () => { edImgVal = ''; renderEdImg(); };
+function castGroups(list){ return [...new Set(list.map(k => k.group || '기타'))]; }
+let castOpenGroups = null;
 function renderCast(){
-  const box = $('#castList'); box.textContent = '';
-  if(!edCast.length) box.innerHTML = '<div class="hint" style="margin-bottom:10px">인물 카드가 없어요. 설정 글에 [이름] 형식으로 인물이 적혀 있으면 \'설정 글에서 인물 나누기\'로 한 번에 만들 수 있어요.</div>';
-  edCast.forEach(k => {
-    const d = document.createElement('details'); d.className = 'card'; d.dataset.kid = k.id;
-    d.innerHTML = '<summary>' + avHTML(k.img, aliasesOf(k).pop(), '', k.color) + '<span class="ctext"><b style="color:var(--k' + k.color + ')">' + esc(k.name) + '</b><small>' + esc(k.short || '한 줄 소개 없음') + '</small></span></summary>'
-      + '<div class="card-body">'
-      + '<div class="row"><button class="' + (k.img ? 'photo-btn av' : 'photo-btn') + '" type="button" data-cf="img"' + (k.img ? ' style="background-image:url(' + k.img + ')"' : '') + '>' + (k.img ? '' : '사진') + '</button>'
-      + '<div style="flex:1;display:grid;gap:8px;min-width:0"><input class="in" data-cf="name" placeholder="이름" value="' + esc(k.name) + '">'
-      + '<input class="in" data-cf="aliases" placeholder="부르는 이름 (쉼표로 구분)" value="' + esc(k.aliases) + '"></div></div>'
-      + '<div class="swatches">' + [0,1,2,3,4,5,6,7].map(n => '<button type="button" data-cf="color" data-v="' + n + '" style="--sw:var(--k' + n + ')" aria-label="대사 색 ' + (n + 1) + '" aria-pressed="' + (k.color === n) + '"></button>').join('') + '</div>'
-      + '<input class="in" data-cf="short" placeholder="한 줄 소개 (장면에 없을 때 보내는 내용)" value="' + esc(k.short) + '">'
-      + '<textarea class="in" data-cf="detail" rows="8" placeholder="자세한 설정">' + esc(k.detail) + '</textarea>'
-      + '<label class="check" style="font-size:13px"><input type="checkbox" data-cf="always"' + (k.always ? ' checked' : '') + '> 항상 자세히 보내기</label>'
-      + '<div class="btns">' + (k.img ? '<button class="btn sm" type="button" data-cf="noimg">사진 지우기</button>' : '') + '<button class="btn sm danger" type="button" data-cf="del">카드 삭제</button></div>'
-      + '</div>';
+  const box = $('#castList'), q = ($('#castQ').value || '').trim().toLowerCase(), gsel = $('#castG').value;
+  const groups = castGroups(edCast);
+  const gs = $('#castG'), cur0 = gs.value;
+  gs.innerHTML = '<option value="">전체 (' + edCast.length + ')</option>' + groups.map(g => '<option value="' + esc(g) + '">' + esc(g) + ' (' + edCast.filter(k => (k.group || '기타') === g).length + ')</option>').join('');
+  gs.value = groups.includes(cur0) ? cur0 : '';
+  $('#groupList').innerHTML = groups.filter(g => g !== '기타').map(g => '<option value="' + esc(g) + '">').join('');
+  $('#tabCastN').textContent = edCast.length ? edCast.length : '';
+  $('#castRevert').hidden = !edPromptBackup;
+  box.textContent = '';
+  if(!edCast.length){ box.innerHTML = '<div class="hint">인물 카드가 없어요. \'AI로 인물 만들기\'에 설명만 넣거나, 설정 글에 [이름] 형식으로 인물이 있으면 \'설정 글에서 나누기\'로 한 번에 만들 수 있어요.</div>'; return; }
+  const match = k => !q || [k.name, k.aliases, k.group, k.short].join(' ').toLowerCase().includes(q);
+  const shown = edCast.filter(k => match(k) && (!gs.value || (k.group || '기타') === gs.value));
+  if(!shown.length){ box.innerHTML = '<div class="hint">찾는 인물이 없어요.</div>'; return; }
+  const many = edCast.length > 12 && !q;
+  if(castOpenGroups === null) castOpenGroups = new Set(many ? [] : groups);
+  castGroups(shown).forEach(g => {
+    const list = shown.filter(k => (k.group || '기타') === g);
+    const d = document.createElement('details'); d.className = 'grp'; d.dataset.g = g;
+    d.open = !!q || !!gs.value || castOpenGroups.has(g) || groups.length === 1;
+    d.innerHTML = '<summary>' + esc(g) + '<span>' + list.length + '명</span></summary>' + list.map(k =>
+      '<button type="button" class="crow2" data-kid="' + esc(k.id) + '">' + avHTML(k.img, aliasesOf(k).pop(), '', k.color)
+      + '<span class="ctext"><b style="color:var(--k' + k.color + ')">' + esc(k.name) + '</b>' + (k.aliases ? ' <small style="display:inline;color:var(--muted)">· ' + esc(k.aliases) + '</small>' : '')
+      + '<small>' + esc(k.short || (k.detail || '').split('\n')[0] || '설정 없음') + '</small></span>' + (k.always ? '<span class="badge">항상</span>' : '') + '</button>').join('');
+    d.addEventListener('toggle', () => { if(d.open) castOpenGroups.add(g); else castOpenGroups.delete(g); });
     box.appendChild(d);
   });
-  $('#castRevert').hidden = !edPromptBackup;
 }
-$('#castList').addEventListener('input', e => {
-  const card = e.target.closest('[data-kid]'), f = e.target.dataset.cf; if(!card || !f) return;
-  const k = edCast.find(x => x.id === card.dataset.kid); if(!k) return;
-  if(f === 'always') k.always = e.target.checked; else if(['name','aliases','short','detail'].includes(f)) k[f] = e.target.value;
-  if(f === 'name' || f === 'short'){ const sm = card.querySelector('summary'); sm.querySelector('b').textContent = k.name; sm.querySelector('small').textContent = k.short || '한 줄 소개 없음'; }
+$('#castQ').addEventListener('input', renderCast);
+$('#castG').addEventListener('change', renderCast);
+$('#castList').addEventListener('click', e => { const b = e.target.closest('[data-kid]'); if(b) openCastCard(b.dataset.kid); });
+let ckCard = null;
+function openCastCard(id){
+  ckCard = edCast.find(k => k.id === id); if(!ckCard) return;
+  const k = ckCard;
+  $('#ckTitle').textContent = k.name;
+  $('#ckName').value = k.name; $('#ckAliases').value = k.aliases; $('#ckGroup').value = k.group || '';
+  $('#ckShort').value = k.short; $('#ckDetail').value = k.detail; $('#ckAlways').checked = !!k.always;
+  renderCk(); openSheet('shCast');
+}
+function renderCk(){
+  const k = ckCard, b = $('#ckImg');
+  b.className = k.img ? 'photo-btn av' : 'photo-btn'; b.style.backgroundImage = k.img ? 'url(' + k.img + ')' : ''; b.textContent = k.img ? '' : '사진';
+  $('#ckNoImg').hidden = !k.img;
+  $('#ckColors').innerHTML = [0,1,2,3,4,5,6,7].map(n => '<button type="button" data-v="' + n + '" style="--sw:var(--k' + n + ')" aria-label="대사 색 ' + (n + 1) + '" aria-pressed="' + (k.color === n) + '"></button>').join('');
+}
+[['ckName','name'],['ckAliases','aliases'],['ckGroup','group'],['ckShort','short'],['ckDetail','detail']].forEach(([id, f]) => {
+  $('#' + id).addEventListener('input', e => { if(!ckCard) return; ckCard[f] = f === 'name' ? (e.target.value || '이름 없음') : e.target.value; if(f === 'name') $('#ckTitle').textContent = ckCard.name; });
 });
-$('#castList').addEventListener('click', async e => {
-  const b = e.target.closest('button[data-cf]'); if(!b) return;
-  const card = b.closest('[data-kid]'), k = edCast.find(x => x.id === card.dataset.kid); if(!k) return;
-  const f = b.dataset.cf;
-  if(f === 'color'){ k.color = +b.dataset.v; renderCastKeepOpen(k.id); }
-  if(f === 'img'){ const u = await pickImage(); if(u){ k.img = u; renderCastKeepOpen(k.id); } }
-  if(f === 'noimg'){ k.img = ''; renderCastKeepOpen(k.id); }
-  if(f === 'del'){ if(!armConfirm(b, '한 번 더', '카드 삭제', 2500)) return; edCast = edCast.filter(x => x !== k); renderCast(); }
-});
-function renderCastKeepOpen(id){ renderCast(); const d = $('#castList').querySelector('[data-kid="' + id + '"]'); if(d) d.open = true; }
-$('#castAdd').onclick = () => { const k = {id:uid(), name:'새 인물', aliases:'', color:edCast.length % 8, img:'', short:'', detail:'', always:false}; edCast.push(k); renderCastKeepOpen(k.id); };
+$('#ckAlways').onchange = e => { if(ckCard) ckCard.always = e.target.checked; };
+$('#ckColors').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if(b && ckCard){ ckCard.color = +b.dataset.v; renderCk(); } });
+$('#ckImg').onclick = async () => { const u = await pickImage(); if(u && ckCard){ ckCard.img = u; renderCk(); } };
+$('#ckNoImg').onclick = () => { if(ckCard){ ckCard.img = ''; renderCk(); } };
+$('#ckDel').onclick = e => {
+  if(!armConfirm(e.currentTarget, '한 번 더 누르면 삭제', '카드 삭제')) return;
+  edCast = edCast.filter(k => k !== ckCard); ckCard = null; closeSheet('shCast'); renderCast();
+};
+$('#castAdd').onclick = () => {
+  const k = {id:uid(), name:'새 인물', aliases:'', group:$('#castG').value || '', color:edCast.length % 8, img:'', short:'', detail:'', always:false};
+  edCast.push(k); renderCast(); openCastCard(k.id); setTimeout(() => { $('#ckName').select(); }, 280);
+};
+/* 편집 화면 탭 */
+function showTab(t){
+  $('#shEdit').querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+  $('#shEdit').querySelectorAll('[data-pane]').forEach(p => { p.hidden = p.dataset.pane !== t; });
+  $('#shEdit .panel-body').scrollTop = 0;
+}
+$('#shEdit').querySelector('.tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if(b) showTab(b.dataset.tab); });
 
 /* 설정 글에서 [이름] 인물 블록 찾기 (글자 그대로 옮김) */
 let splitCand = [];
@@ -2139,24 +2282,40 @@ function openEditor(id, focusPc){
   $('#edExport').hidden = !id;
   edLore = JSON.parse(JSON.stringify(c.lore || []));
   edCast = JSON.parse(JSON.stringify(c.cast || [])); edPromptBackup = c.promptBackup || ''; edImgVal = c.img || '';
+  castOpenGroups = null; $('#castQ').value = ''; $('#castG').value = ''; $('#loreQ').value = ''; loreShow = 40;
   renderCast(); renderEdImg();
   renderLore();
-  $('#edDel').hidden = !id;
+  $('#edDel').hidden = !id; $('#edLink').hidden = !id;
+  showTab('base');
   openSheet('shEdit');
   if(focusPc) setTimeout(() => { $('#pcSec').scrollIntoView({block:'start'}); }, 260);
 }
-function renderLore(){
-  const box = $('#loreList'); box.textContent = '';
-  edLore.forEach(l => {
-    const d = document.createElement('div'); d.className = 'card'; d.dataset.lid = l.id;
-    d.innerHTML = '<div class="card-head"><label class="check" style="font-size:13px"><input type="checkbox" data-f="always"' + (l.always ? ' checked' : '') + '> 항상</label>'
-      + '<label class="check" style="font-size:13px"><input type="checkbox" data-f="pin"' + (l.pin ? ' checked' : '') + '> 규칙으로 강조</label>'
-      + '<button class="btn sm danger" type="button" data-f="del">삭제</button></div>'
-      + '<input class="in" data-f="keys" placeholder="키워드 (쉼표로 구분: 학교, 고등학교, 반 친구)" value="' + esc(l.keys) + '">'
-      + '<textarea class="in" data-f="text" rows="3" placeholder="설명">' + esc(l.text) + '</textarea>';
+let loreShow = 40;
+function loreBody(l){
+  return '<div class="card"><div class="card-head"><label class="check" style="font-size:13px"><input type="checkbox" data-f="always"' + (l.always ? ' checked' : '') + '> 항상</label>'
+    + '<label class="check" style="font-size:13px"><input type="checkbox" data-f="pin"' + (l.pin ? ' checked' : '') + '> 규칙으로 강조</label>'
+    + '<button class="btn sm danger" type="button" data-f="del">삭제</button></div>'
+    + '<input class="in" data-f="keys" placeholder="키워드 (쉼표로 구분: 학교, 고등학교, 반 친구)" value="' + esc(l.keys) + '">'
+    + '<textarea class="in" data-f="text" rows="8" placeholder="설명">' + esc(l.text) + '</textarea></div>';
+}
+function renderLore(openId){
+  const box = $('#loreList'), q = ($('#loreQ').value || '').trim().toLowerCase();
+  $('#tabLoreN').textContent = edLore.length ? edLore.length : '';
+  box.textContent = '';
+  const list = edLore.filter(l => !q || (l.keys + ' ' + l.text).toLowerCase().includes(q));
+  if(!edLore.length){ box.innerHTML = '<div class="hint">사전 항목이 없어요.</div>'; return; }
+  if(!list.length){ box.innerHTML = '<div class="hint">찾는 항목이 없어요.</div>'; return; }
+  list.slice(0, loreShow).forEach(l => {
+    const d = document.createElement('details'); d.className = 'lrow'; d.dataset.lid = l.id;
+    d.innerHTML = '<summary><span class="ctext"><b>' + esc(l.keys.split(/[,，]/)[0].trim() || '(키워드 없음)') + '</b><small>' + esc(l.text.replace(/\s+/g, ' ').slice(0, 60) || '내용 없음') + '</small></span>'
+      + (l.pin ? '<span class="badge">규칙</span>' : l.always ? '<span class="badge">항상</span>' : '') + '</summary>';
+    d.addEventListener('toggle', () => { if(d.open && !d.querySelector('.card')) d.insertAdjacentHTML('beforeend', loreBody(l)); });
+    if(l.id === openId){ d.open = true; }
     box.appendChild(d);
   });
+  if(list.length > loreShow){ const b = document.createElement('button'); b.type = 'button'; b.className = 'btn more'; b.textContent = '더 보기 (' + (list.length - loreShow) + '개 남음)'; b.onclick = () => { loreShow += 60; renderLore(); }; box.appendChild(b); }
 }
+$('#loreQ').addEventListener('input', () => { loreShow = 40; renderLore(); });
 $('#loreList').addEventListener('input', e => {
   const card = e.target.closest('[data-lid]'); if(!card) return;
   const l = edLore.find(x => x.id === card.dataset.lid); const f = e.target.dataset.f;
@@ -2174,7 +2333,7 @@ $('#loreList').addEventListener('click', e => {
     const id = b.closest('[data-lid]').dataset.lid; edLore = edLore.filter(x => x.id !== id); renderLore();
   }
 });
-$('#loreAdd').onclick = () => { edLore.push({id:uid(), keys:'', text:'', always:false}); renderLore(); const cs = $('#loreList').querySelectorAll('[data-f="keys"]'); cs[cs.length-1].focus(); };
+$('#loreAdd').onclick = () => { const l = {id:uid(), keys:'', text:'', always:false}; edLore.unshift(l); $('#loreQ').value = ''; renderLore(l.id); const k = $('#loreList').querySelector('[data-f="keys"]'); if(k) k.focus(); };
 function saveEditor(){
   const name = $('#edName').value.trim();
   if(!name){ toast('이름을 입력해 주세요'); $('#edName').focus(); return; }
@@ -2188,7 +2347,7 @@ function saveEditor(){
   closeSheet('shEdit'); toast('저장했어요');
 }
 $('#edSave').onclick = saveEditor;
-$('#edSave2').onclick = saveEditor;
+
 $('#edDel').onclick = () => {
   const b = $('#edDel');
   if(state.chars.length < 2){ toast('캐릭터는 최소 하나 필요해요'); return; }
@@ -2422,11 +2581,13 @@ function fillStyle(){
 /* ================= 비밀·떡밥 ================= */
 function renderSecrets(){
   const s = cur(), c = charOf(s), box = $('#secList'); box.textContent = '';
-  const list = secretList(c, s);
+  const q = ($('#secQ').value || '').trim().toLowerCase();
+  const list = secretList(c, s).filter(x => { if(!q) return true; const o = c.cast.find(k => k.id === x.owner); return (x.title + ' ' + x.detail + ' ' + (o ? o.name : '')).toLowerCase().includes(q); });
   if(!list.length){ box.innerHTML = '<div class="hint">아직 항목이 없어요. \'+ 추가\'로 직접 적거나 \'설정에서 찾기\'를 눌러 보세요.</div>'; return; }
   list.forEach(x => {
     const d = document.createElement('div'); d.className = 'card'; d.dataset.sid = x.id; d.dataset.scope = x.scope;
-    d.innerHTML = '<div class="card-head"><b>' + (x.scope === 'char' ? '공통' : '이 대화') + '</b><button class="btn sm danger" type="button" data-sf="del">삭제</button></div>'
+    const own = c.cast.find(k => k.id === x.owner);
+    d.innerHTML = '<div class="card-head"><b>' + (x.scope === 'char' ? '공통' : '이 대화') + (own ? ' · <span style="color:var(--k' + own.color + ')">' + esc(own.name) + '</span>의 비밀' : '') + '</b><button class="btn sm danger" type="button" data-sf="del">삭제</button></div>'
       + '<input class="in" data-sf="title" placeholder="제목 (예: 쿠로미의 진짜 직업)" value="' + esc(x.title) + '">'
       + '<textarea class="in" data-sf="detail" rows="2" placeholder="내용">' + esc(x.detail) + '</textarea>'
       + '<div class="seg">' + ['hidden','hint','revealed'].map(v => '<button type="button" data-sf="status" data-v="' + v + '" aria-pressed="' + (x.st.status === v) + '">' + SECRET_LABEL[v] + '</button>').join('') + '</div>'
@@ -2456,6 +2617,7 @@ $('#secList').addEventListener('click', e => {
     delete s.secretState[id]; touch(s); renderSecrets();
   }
 });
+$('#secQ').addEventListener('input', () => renderSecrets());
 $('#secAdd').onclick = () => {
   const s = cur(), c = charOf(s);
   c.secrets.push({id:uid(), title:'', detail:'', knownBy0:''}); touch(s); renderSecrets();
@@ -2469,11 +2631,11 @@ $('#secFind').onclick = async () => {
   btn.disabled = true; $('#secFound').innerHTML = '<div class="hint" style="margin-bottom:12px">설정 글을 읽는 중…</div>';
   try{
     const out = await complete('', [{role:'user', text:'다음 롤플레이 설정 글에서, 어떤 인물이 다른 인물에게 숨기고 있거나 아직 드러나지 않은 사실을 모두 찾아. 설정 글에 없는 내용은 만들지 마.\n'
-      + 'JSON 배열로만 답해. 형식: [{"title":"짧은 제목","detail":"설정 글에 적힌 내용 요약","knownBy":"처음부터 알고 있는 인물(본인 제외, 없으면 빈 문자열)"}]\n\n' + src}], {quiet:true, effort:'low', thinking:'low', temp:0.2, maxTokens:4096});
+      + 'JSON 배열로만 답해. 형식: [{"title":"짧은 제목","detail":"설정 글에 적힌 내용 요약","owner":"비밀을 가진 인물 이름(없으면 빈 문자열)","knownBy":"처음부터 알고 있는 인물(본인 제외, 없으면 빈 문자열)"}]\n\n' + src}], {quiet:true, effort:'low', thinking:'low', temp:0.2, maxTokens:4096});
     const a = out.indexOf('['), b = out.lastIndexOf(']');
     const arr = JSON.parse(out.slice(a, b + 1));
     const have = secretList(c, s).map(x => x.title);
-    secCand = (Array.isArray(arr) ? arr : []).filter(x => x && x.title && !have.includes(x.title)).map(x => ({title:String(x.title), detail:String(x.detail || ''), knownBy0:String(x.knownBy || '')}));
+    secCand = (Array.isArray(arr) ? arr : []).filter(x => x && x.title && !have.includes(x.title)).map(x => { const o = castFind(c, x.owner); return {title:String(x.title), detail:String(x.detail || ''), knownBy0:String(x.knownBy || ''), owner:o ? o.id : ''}; });
     $('#secFound').innerHTML = secCand.length
       ? '<div class="sec">찾은 항목 (골라서 추가)</div>' + secCand.map((x, i) => '<label class="split-item"><input type="checkbox" checked data-i="' + i + '"><span><b>' + esc(x.title) + '</b><small>' + esc(x.detail) + (x.knownBy0 ? '\n아는 사람: ' + esc(x.knownBy0) : '') + '</small></span></label>').join('')
         + '<div class="btns" style="margin-bottom:16px"><button class="btn primary" type="button" id="secAddFound">고른 항목 추가</button></div>'
@@ -2618,7 +2780,7 @@ $('#savePreview').addEventListener('click', async e => {
   if(e.target.id !== 'saveApply' || !pendingSave) return;
   const d = pendingSave; pendingSave = null;
   const msg = await applySaveData(d);
-  closeSheet('shSave'); closeSheet('shChars');
+  closeTopSheets(['shSave','shChars'].filter(x => stack.includes(x)).length);
   toast(msg || '세이브를 적용했어요', 4500);
 });
 $('#saveCheck').onclick = async () => {
@@ -2651,6 +2813,110 @@ $('#bkCode').onclick = async () => {
     toast('전체 세이브 코드를 복사했어요 (' + Math.round(code.length / 1024) + 'KB). 다른 기기의 가져오기에 붙여 넣으면 돼요', 5000);
   }catch(e){ toast('세이브 코드를 만들지 못했어요'); }
 };
+
+/* ================= AI로 만들기 (인물·PC·설정 글) ================= */
+let genMode = 'cast';
+const GEN_INFO = {
+  cast:{title:'AI로 인물 만들기', hint:'설명과 키워드를 주면 이 세계관과 기존 인물들에 어울리는 인물 카드를 써요. 결과를 고친 뒤 추가하세요.', desc:'예: 히나와 같은 모델 소속사의 매니저. 겉으론 깐깐하지만 히나를 아낀다', apply:'카드로 추가', text:'자세한 설정'},
+  pc:{title:'AI로 PC 만들기', hint:'설명과 키워드를 주면 고른 세계관에 맞는 PC 설정을 써요.', desc:'예: 아사이 가 옆집에 이사 온 대학원생. 조용하지만 눈치가 빠르다', apply:'PC로 추가', text:'PC 설정'},
+  world:{title:'AI로 설정 글 쓰기', hint:'설명과 키워드를 주면 세계관 지침, 진행자 설정, 세계관, 등장인물 초안을 써요. 등장인물은 [이름] 형식이라 나중에 인물 탭의 \'설정 글에서 나누기\'로 카드로 만들 수 있어요.', desc:'예: 1920년대 경성의 카페를 무대로 한 잔잔한 로맨스. 독립운동의 긴장이 깔려 있다', apply:'설정 글을 이걸로 바꾸기', text:'설정 글'}
+};
+function genModelName(){ return $('#genModelIn').value.trim() || S.genModel || model(); }
+function openGen(mode){
+  genMode = mode; const g = GEN_INFO[mode];
+  $('#genTitle').textContent = g.title; $('#genHint').textContent = g.hint; $('#genDesc').placeholder = g.desc;
+  $('#genDesc').value = ''; $('#genKeys').value = ''; $('#genGroup').value = mode === 'cast' ? ($('#castG').value || '') : '';
+  $('#genModelIn').value = S.genModel || ''; $('#genModelIn').placeholder = model() || '';
+  $('#genModelHint').textContent = '비우면 ' + (S.genModel ? '설정의 작성용 모델(' + S.genModel + ')' : '대화 모델(' + model() + ')') + '을 써요. 지금 서비스: ' + PROV[S.provider].label;
+  $('#genGroupRow').hidden = mode !== 'cast';
+  $('#genCtxRow').hidden = mode !== 'pc';
+  if(mode === 'pc') $('#genCtx').innerHTML = '<option value="">세계관 없이</option>' + state.chars.map(c => '<option value="' + esc(c.id) + '"' + (c.id === state.active ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('');
+  $('#genNameRow').hidden = mode === 'world'; $('#genAliasRow').hidden = mode !== 'cast'; $('#genShortRow').hidden = mode !== 'cast';
+  $('#genTextLbl').textContent = g.text; $('#genApply').textContent = g.apply;
+  $('#genOut').hidden = true;
+  openSheet('shGen');
+}
+function genPrompt(){
+  const desc = $('#genDesc').value.trim(), keys = $('#genKeys').value.trim();
+  const ask = (desc ? '설명: ' + desc + '\n' : '') + (keys ? '키워드: ' + keys + '\n' : '');
+  if(genMode === 'cast'){
+    const world = $('#edPrompt').value.slice(0, 12000);
+    const roster = edCast.length ? edCast.map(k => '- ' + k.name + (k.group ? ' (' + k.group + ')' : '') + (k.short ? ': ' + k.short : '')).join('\n').slice(0, 6000) : '(없음)';
+    const sample = edCast.find(k => k.detail && k.detail.length > 200);
+    return '[세계관 설정]\n' + world + '\n\n[기존 인물]\n' + roster + '\n\n'
+      + (sample ? '[기존 인물 카드 예시 — 이 형식, 항목, 분량을 따른다]\n' + sample.detail.slice(0, 3500) + '\n\n' : '')
+      + '[만들 인물]\n' + ask + ($('#genGroup').value.trim() ? '소속: ' + $('#genGroup').value.trim() + '\n' : '')
+      + '\n위 세계관과 기존 인물들에 어울리는 새 인물을 만들어. 기존 설정과 모순되지 않게 하고, 기존 인물과의 관계도 한두 개 넣어.\n아래 형식 그대로만 출력해.\n'
+      + '이름: \n부르는 이름: (별명이나 줄여 부르는 이름, 쉼표로 구분. 없으면 비움)\n소속: \n한 줄 소개: \n---\n'
+      + (sample ? '(여기부터 자세한 설정. 위 예시 카드와 같은 항목과 형식으로)' : '(여기부터 자세한 설정: 나이/성별, 성격, 배경, 관계, 외모, 말투, 약점·비밀, 예시 대사 2~4줄)');
+  }
+  if(genMode === 'pc'){
+    const c = state.chars.find(x => x.id === $('#genCtx').value);
+    const sample = state.pcs.find(p => p.desc && p.desc.length > 80);
+    return (c ? '[세계관 설정]\n' + c.prompt.slice(0, 12000) + '\n\n' : '')
+      + (sample ? '[기존 PC 설정 예시 — 이 형식과 분량을 따른다]\n' + sample.desc.slice(0, 2000) + '\n\n' : '')
+      + '[만들 PC]\n' + ask + '\n' + (c ? '위 세계관에 어울리는 ' : '') + '롤플레이에서 사용자가 연기할 PC를 만들어. PC의 속마음이나 앞으로의 행동은 정하지 말고, 배경과 현재 처지까지만 써.\n아래 형식 그대로만 출력해.\n'
+      + '이름: \n---\n' + (sample ? '(여기부터 PC 설정. 위 예시와 같은 항목과 형식으로)' : '성별: \n나이: \n외형 키워드: \n성격 키워드: \n기타: (배경, 이 세계에서의 위치, 다른 인물과의 관계)');
+  }
+  return '[만들 세계관]\n' + ask + '\n롤플레이 진행자가 매 답변마다 참고할 세계관 설정 글을 써. 한국어로, 아래 구성 그대로 써.\n\n'
+    + '[세계관 지침]\n(장르와 톤, 지켜야 할 현실성 규칙)\n\n[진행자 설정]\n(서술 방식, 장면 운영 원칙. PC의 대사·행동·생각을 대신 쓰지 않는다는 규칙 포함)\n\n[세계관 설정]\n(시대와 배경, 주요 장소, 세력)\n\n'
+    + '그리고 주요 인물 3~6명을 각각 아래 형식으로:\n[인물 이름]\n성별: \n나이: \n외형 키워드: \n성격 키워드: \n기타: \n예시 대사: ';
+}
+function parseGen(t){
+  t = String(t || '').trim().replace(/^```[a-z]*\n?|```$/g, '');
+  const i = t.search(/^-{3,}\s*$/m);
+  if(i < 0) return {head:{}, body:t};
+  const head = {};
+  t.slice(0, i).split('\n').forEach(l => { const m = /^\s*([^:：]+)[:：]\s*(.*)$/.exec(l); if(m) head[m[1].trim()] = m[2].trim(); });
+  return {head, body:t.slice(i).replace(/^-{3,}\s*\n?/, '').trim()};
+}
+let genBusy = false;
+async function runGen(){
+  if(genBusy) return;
+  if(!$('#genDesc').value.trim() && !$('#genKeys').value.trim()){ toast('설명이나 키워드를 적어 주세요'); $('#genDesc').focus(); return; }
+  if(!ready()) return;
+  genBusy = true; const btn = $('#genGo'); btn.disabled = true; btn.textContent = '작성 중…'; $('#genRetry').disabled = true;
+  try{
+    const out = await complete('너는 롤플레이 세계관과 인물 설정을 쓰는 작가다. 요청한 형식만 출력하고 다른 말은 덧붙이지 않는다. 한국어로 쓴다.',
+      [{role:'user', text:genPrompt()}], {quiet:true, model:genModelName(), temp:0.9, maxTokens:8192, effort:'medium'});
+    if(!out.trim()) throw new Error('빈 결과가 왔어요');
+    const p = parseGen(out);
+    if(genMode === 'world'){ $('#genText').value = out.trim(); }
+    else {
+      $('#genName').value = p.head['이름'] || '';
+      $('#genAliases').value = p.head['부르는 이름'] || '';
+      $('#genShort').value = p.head['한 줄 소개'] || '';
+      if(genMode === 'cast' && p.head['소속'] && !$('#genGroup').value.trim()) $('#genGroup').value = p.head['소속'];
+      $('#genText').value = p.body;
+    }
+    $('#genApply2').hidden = !(genMode === 'world' && $('#edPrompt').value.trim());
+    $('#genApply').textContent = genMode === 'world' && !$('#edPrompt').value.trim() ? '설정 글로 쓰기' : GEN_INFO[genMode].apply;
+    $('#genOut').hidden = false;
+    setTimeout(() => $('#genOut').scrollIntoView({block:'start', behavior:'smooth'}), 50);
+  }catch(e){ toast('작성하지 못했어요. ' + (e && e.message ? e.message : ''), 5000); }
+  finally{ genBusy = false; btn.disabled = false; btn.textContent = '작성하기'; $('#genRetry').disabled = false; }
+}
+$('#genGo').onclick = runGen;
+$('#genRetry').onclick = runGen;
+function applyGen(append){
+  const text = $('#genText').value.trim(); if(!text){ toast('내용이 비어 있어요'); return; }
+  if(genMode === 'cast'){
+    const k = {id:uid(), name:$('#genName').value.trim() || '새 인물', aliases:$('#genAliases').value.trim(), group:$('#genGroup').value.trim(), color:edCast.length % 8, img:'', short:$('#genShort').value.trim(), detail:text, always:false};
+    edCast.push(k); closeSheet('shGen'); renderCast(); toast(k.name + ' 카드를 추가했어요. 캐릭터 편집에서 저장을 눌러야 적용돼요', 4000);
+  } else if(genMode === 'pc'){
+    const p = {id:uid(), name:$('#genName').value.trim() || '새 PC', avatar:'', desc:text, img:''};
+    state.pcs.push(p); if(!S.defaultPc) S.defaultPc = p.id; persist(); closeSheet('shGen'); renderPcs(); toast(p.name + '을(를) PC 목록에 추가했어요', 3500);
+  } else {
+    const cur0 = $('#edPrompt').value.trim();
+    $('#edPrompt').value = append && cur0 ? cur0 + '\n\n' + text : text;
+    closeSheet('shGen'); toast('설정 글에 넣었어요. 저장을 눌러야 적용돼요', 3500);
+  }
+}
+$('#genApply').onclick = () => applyGen(false);
+$('#genApply2').onclick = () => applyGen(true);
+$('#genCast').onclick = () => openGen('cast');
+$('#genWorld').onclick = () => openGen('world');
+$('#genPc').onclick = () => openGen('pc');
 
 /* ================= 유저 노트 ================= */
 function fillNote(){
@@ -2746,7 +3012,7 @@ function fillSettings(){
   $('#fProv').value = p;
   $('#fKey').value = S.keys[p] || '';
   $('#fModel').value = S.models[p] || PROV[p].model || '';
-  $('#fSumModel').value = S.sumModel || '';
+  $('#fSumModel').value = S.sumModel || ''; $('#fGenModel').value = S.genModel || '';
   $('#rowBase').hidden = p !== 'custom'; $('#fBase').value = S.customBase || '';
   $('#rowSafety').hidden = p !== 'gemini'; $('#fSafety').value = S.safety;
   $('#rowThink').hidden = p !== 'gemini'; $('#fThink').value = S.thinking;
@@ -2786,6 +3052,7 @@ $('#fKey').oninput = e => { S.keys[S.provider] = e.target.value.trim(); setS(); 
 $('#keyToggle').onclick = () => { const k = $('#fKey'), show = k.type === 'password'; k.type = show ? 'text' : 'password'; $('#keyToggle').textContent = show ? '숨김' : '보기'; };
 $('#fModel').oninput = e => { S.models[S.provider] = e.target.value.trim(); setS(); $('#tempHint').hidden = !noTemp(); };
 $('#fSumModel').oninput = e => { S.sumModel = e.target.value.trim(); setS(); };
+$('#fGenModel').oninput = e => { S.genModel = e.target.value.trim(); setS(); };
 $('#fBase').oninput = e => { S.customBase = e.target.value.trim().replace(/\/+$/, ''); setS(); };
 $('#fSafety').onchange = e => { S.safety = e.target.value; setS(); };
 $('#fThink').onchange = e => { S.thinking = e.target.value; setS(); };
@@ -2977,7 +3244,7 @@ if('serviceWorker' in navigator && location.protocol === 'https:'){
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
-window.__ibanggi = {lockOn, parseSummary, buildContext: (...a) => buildContext(...a), systemText: (...a) => systemText(...a), get state(){ return state; }};
+window.__ibanggi = {lockOn, aliasesOf, castFind, activeCast, currentScene, parseSummary, buildContext: (...a) => buildContext(...a), systemText: (...a) => systemText(...a), get state(){ return state; }};
 })();
 </script>
 </body>
