@@ -299,6 +299,7 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
   <div id="menu" hidden>
     <button id="mSess">대화 목록</button>
     <button id="mNew">새 대화 시작</button>
+    <button id="mReset">이 대화 처음으로</button>
     <button id="mEdit">캐릭터 편집</button>
     <button id="mPc">PC 목록</button>
     <button id="mSecret">비밀·떡밥</button>
@@ -403,6 +404,23 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
         <input class="in" id="scOthers" placeholder="그 밖의 인물 (쉼표로 구분)">
       </div>
       <label class="check"><input type="checkbox" id="scTrack"> 답변마다 장면 자동 기록</label>
+    </div>
+  </div>
+</section>
+
+<!-- 대화 처음으로 -->
+<section class="sheet" id="shReset" aria-label="이 대화 처음으로">
+  <div class="back" data-close="shReset"></div>
+  <div class="panel">
+    <div class="panel-head"><h2>이 대화 처음으로</h2><button class="btn" data-close="shReset">취소</button></div>
+    <div class="panel-body">
+      <div class="hint" style="margin-bottom:12px">대화 내용, 기억과 요약, 장면, 상태창, 호감도, 비밀 진행 상태, OOC 기록을 처음 상태로 되돌려요. 세계관, 인물, PC 설정과 답변 형식은 그대로예요.</div>
+      <label class="check"><input type="checkbox" id="rsCopy" checked> 지금 대화를 사본으로 남기기 (대화 목록에서 다시 볼 수 있어요)</label>
+      <label class="check"><input type="checkbox" id="rsEvents" checked> 예약한 사건 유지 (일어난 사건도 다시 대기로)</label>
+      <label class="check"><input type="checkbox" id="rsPinned"> 유저 노트(이 대화) 유지</label>
+      <label class="check"><input type="checkbox" id="rsStat"> 상태창 값 유지 (호감도는 처음으로)</label>
+      <div class="hint" id="rsInfo" style="margin:12px 0"></div>
+      <button class="btn primary" id="rsGo" type="button" style="width:100%">처음으로 되돌리기</button>
     </div>
   </div>
 </section>
@@ -3165,6 +3183,34 @@ $('#mNew').onclick = () => {
   if(busy){ toast('생성이 끝난 뒤에 해 주세요'); return; }
   newSession(activeChar()); persist(); renderAll(); $('#menu').hidden = true; hideErr();
   toast('새 대화를 시작했어요. 이전 대화는 대화 목록에 있어요');
+};
+$('#mReset').onclick = () => {
+  if(busy){ toast('생성이 끝난 뒤에 해 주세요'); return; }
+  const s = cur(), c = charOf(s);
+  $('#rsInfo').textContent = '지금 ' + turnCount(s.msgs) + '턴' + (s.mem.chunks.length ? ' · 요약 ' + s.mem.chunks.length + '개' : '') + (c.greeting && c.greeting.trim() ? ' · 첫 메시지부터 다시 시작해요' : ' · 빈 대화로 시작해요');
+  $('#rsStat').closest('label').hidden = !(c.status.length || c.affinity);
+  $('#rsPinned').closest('label').hidden = !(s.mem.pinned && s.mem.pinned.trim());
+  $('#rsEvents').closest('label').hidden = !(s.events && s.events.length);
+  openSheet('shReset');
+};
+$('#rsGo').onclick = () => {
+  if(busy){ toast('생성이 끝난 뒤에 해 주세요'); return; }
+  const s = cur(), c = charOf(s);
+  if(summarizing.has(s.id)){ toast('기억 정리가 끝난 뒤에 해 주세요'); return; }
+  if($('#rsCopy').checked && s.msgs.length){
+    const cp = JSON.parse(JSON.stringify(s)); cp.id = uid(); cp.title = s.title + ' (처음으로 되돌리기 전)'; cp.updated = Date.now() - 1;
+    state.sessions[cp.id] = cp;
+  }
+  const keepStat = $('#rsStat').checked && !$('#rsStat').closest('label').hidden ? {v:Object.assign({}, currentStat(s).v), a:{}} : null;
+  const keepPinned = $('#rsPinned').checked ? s.mem.pinned : '';
+  s.events = $('#rsEvents').checked ? (s.events || []).map(e => { const x = Object.assign({}, e, {status:'wait', at:0}); delete x.doneTurn; return x; }) : [];
+  s.msgs = []; if(c.greeting && c.greeting.trim()) s.msgs.push({id:uid(), role:'assistant', text:expand(c.greeting, c, s)});
+  s.mem = newMem(); s.mem.pinned = keepPinned || '';
+  s.scene = null; s.stat = keepStat;
+  s.secretState = {}; s.ooc = []; s.draft = '';
+  input.value = ''; autosize(); hideErr();
+  s.updated = Date.now(); persist(true); closeSheet('shReset'); renderAll();
+  toast($('#rsCopy').checked ? '처음으로 되돌렸어요. 이전 내용은 대화 목록에 사본으로 있어요' : '처음으로 되돌렸어요', 4000);
 };
 function chatText(){
   const s = cur(), c = charOf(s);
