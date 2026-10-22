@@ -135,6 +135,30 @@ hr{border:0;border-top:1px solid var(--line);margin:8px 0 18px}
 .sec{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--accent);margin:6px 0 12px}
 
 .crow{display:flex;align-items:center;gap:4px;border-radius:14px;margin-bottom:4px}
+.hsec{font-size:12px;font-weight:700;color:var(--muted);margin:14px 4px 6px;letter-spacing:.02em}
+.hsec:first-child{margin-top:0}
+.srow{display:flex;align-items:center;gap:2px;border-radius:14px;margin-bottom:2px}
+.srow.on{background:var(--surface2)}
+.srow .cpick{padding:8px 6px 8px 8px;gap:10px}
+.srow .av{width:36px;height:36px;font-size:13px;flex:none}
+.srow .ctext small.pv{opacity:.85}
+.srow .ib{width:36px;height:36px;color:var(--muted)}
+.tagpin{display:inline-block;font-size:10.5px;font-weight:700;color:var(--accent);border:1px solid currentColor;border-radius:6px;padding:0 4px;margin-right:5px;vertical-align:1px}
+details.wgrp{border:1px solid var(--line);border-radius:16px;margin-bottom:8px;background:var(--surface)}
+details.wgrp > summary{list-style:none;display:flex;align-items:center;gap:10px;padding:10px 8px 10px 12px;cursor:pointer}
+details.wgrp > summary::-webkit-details-marker{display:none}
+details.wgrp > summary .ctext{flex:1;min-width:0}
+details.wgrp > summary .av{width:40px;height:40px;flex:none}
+details.wgrp .wbody{padding:0 6px 6px}
+details.wgrp .wbody .hint{padding:4px 8px 8px}
+.actlist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.actlist button{border:0;border-bottom:1px solid var(--line);background:var(--surface);text-align:left;padding:13px 14px;font-size:15px}
+.actlist button:last-child{border-bottom:0}
+.actlist button.danger{color:var(--danger)}
+#undoBar{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:45;display:flex;align-items:center;gap:12px;
+  background:var(--ink);color:var(--bg);padding:8px 8px 8px 16px;border-radius:16px;font-size:13px;max-width:min(92vw,420px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
+#undoBar button{border:0;background:transparent;color:var(--bg);font-weight:700;padding:6px 10px;border-radius:10px;text-decoration:underline}
+.startmark{color:var(--muted)}
 .crow.on{background:var(--surface2)}
 .cpick{flex:1;min-width:0;display:flex;align-items:center;gap:12px;border:0;background:transparent;text-align:left;padding:8px;border-radius:14px}
 .ctext{min-width:0;display:flex;flex-direction:column}
@@ -255,10 +279,10 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
 <body>
 <div id="app">
   <header class="top">
-    <button class="ib" id="btnChars" aria-label="캐릭터 목록">
+    <button class="ib" id="btnChars" aria-label="대화 홈">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
     </button>
-    <button class="who-wrap" id="btnWho" aria-label="기억과 요약 열기">
+    <button class="who-wrap" id="btnWho" aria-label="대화 바꾸기">
       <span class="av" id="hAv"></span>
       <span class="who-text"><b id="hName">불러오는 중</b><small id="hSub"></small></span>
     </button>
@@ -297,10 +321,8 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
   </form>
 
   <div id="menu" hidden>
-    <button id="mSess">대화 목록</button>
-    <button id="mNew">새 대화 시작</button>
     <button id="mReset">이 대화 처음으로</button>
-    <button id="mEdit">캐릭터 편집</button>
+    <button id="mEdit">세계관 편집</button>
     <button id="mPc">PC 목록</button>
     <button id="mSecret">비밀·떡밥</button>
     <button id="mEvent">사건 예약</button>
@@ -310,26 +332,71 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
   </div>
 </div>
 
-<!-- 캐릭터 목록 -->
-<section class="sheet" id="shChars" aria-label="캐릭터 목록">
+<!-- 대화 홈 -->
+<section class="sheet" id="shChars" aria-label="대화 홈">
   <div class="back" data-close="shChars"></div>
   <div class="panel">
-    <div class="panel-head"><h2>캐릭터</h2><div class="btns"><button class="btn" id="packImport">가져오기</button><button class="btn primary" id="newChar">+ 새 캐릭터</button></div></div>
-    <div class="panel-body"><div id="charList"></div></div>
-  </div>
-</section>
-
-<!-- 대화 목록 -->
-<section class="sheet" id="shSess" aria-label="대화 목록">
-  <div class="back" data-close="shSess"></div>
-  <div class="panel">
-    <div class="panel-head"><h2 id="sessTitle">대화 목록</h2><button class="btn primary" id="newSess">+ 새 대화</button></div>
+    <div class="panel-head"><h2>대화</h2><div class="btns"><button class="btn" id="packImport">가져오기</button><button class="btn primary" id="homeNew">+ 새 대화</button></div></div>
     <div class="panel-body">
-      <div class="hint" style="margin-bottom:12px">대화마다 기억과 요약이 따로 저장돼요. 이름을 길게 누르지 말고 연필 버튼으로 바꾸세요.</div>
-      <div id="sessList"></div>
+      <input class="in" id="homeQ" type="search" placeholder="대화 제목, 세계관, 내용으로 찾기" aria-label="대화 찾기" style="margin-bottom:12px">
+      <div id="charList"></div>
+      <button class="btn" id="newChar" type="button" style="width:100%;margin-top:14px">+ 새 세계관 만들기</button>
     </div>
   </div>
 </section>
+
+<!-- 이 세계관 대화 (빠른 전환) -->
+<section class="sheet" id="shSess" aria-label="대화 바꾸기">
+  <div class="back" data-close="shSess"></div>
+  <div class="panel">
+    <div class="panel-head"><h2 id="sessTitle">대화</h2><button class="btn primary" id="newSess">+ 새 대화</button></div>
+    <div class="panel-body">
+      <div id="sessList"></div>
+      <button class="btn" id="sessAll" type="button" style="width:100%;margin-top:12px">모든 대화 보기</button>
+    </div>
+  </div>
+</section>
+
+<!-- 대화 관리 -->
+<section class="sheet" id="shAct" aria-label="대화 관리">
+  <div class="back" data-close="shAct"></div>
+  <div class="panel">
+    <div class="panel-head"><h2 id="actTitle">대화</h2><button class="btn" data-close="shAct">닫기</button></div>
+    <div class="panel-body">
+      <div class="hint" id="actInfo" style="margin-bottom:12px"></div>
+      <div class="split" style="margin-bottom:14px"><input class="in" id="actName" maxlength="40" aria-label="대화 이름"><button class="btn" id="actRename" type="button">이름 저장</button></div>
+      <div class="actlist">
+        <button type="button" data-a="open">이 대화 열기</button>
+        <button type="button" data-a="pin" id="actPin">맨 위에 고정</button>
+        <button type="button" data-a="dup">복제 (사본 만들기)</button>
+        <button type="button" data-a="reset">처음으로 되돌리기</button>
+        <button type="button" data-a="txt">텍스트 파일로 저장</button>
+        <button type="button" data-a="del" class="danger">삭제</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 새 대화 -->
+<section class="sheet" id="shNew" aria-label="새 대화">
+  <div class="back" data-close="shNew"></div>
+  <div class="panel">
+    <div class="panel-head"><h2>새 대화</h2><button class="btn primary" id="nwGo" type="button">시작</button></div>
+    <div class="panel-body">
+      <div class="field"><label class="lbl" for="nwWorld">세계관</label><select class="in" id="nwWorld"></select></div>
+      <div class="field"><label class="lbl" for="nwPc">PC</label><select class="in" id="nwPc"></select></div>
+      <div class="field"><label class="lbl" for="nwTitle">대화 이름 <span class="hint">(비우면 자동)</span></label><input class="in" id="nwTitle" maxlength="40"></div>
+      <div class="field">
+        <span class="lbl">시작 장면 <span class="hint">(선택)</span></span>
+        <div class="split"><input class="in" id="nwTime" placeholder="시간 (예: 3월 첫 월요일 오후)" aria-label="시작 시간"><input class="in" id="nwPlace" placeholder="장소" aria-label="시작 장소"></div>
+        <textarea class="in" id="nwSit" rows="3" placeholder="상황 (예: 출근 첫날, 원장에게 인사하러 간다)" aria-label="시작 상황" style="margin-top:6px"></textarea>
+        <div class="hint" id="nwHint" style="margin-top:6px"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="undoBar" hidden role="status"><span id="undoText"></span><button id="undoBtn" type="button">되돌리기</button></div>
 
 <!-- 기억 -->
 <section class="sheet" id="shMem" aria-label="기억과 요약">
@@ -1285,6 +1352,11 @@ function renderHeader(){
   $('#notice').hidden = !missingKey();
 }
 function msgNode(m, i, msgs, s){
+  if(m.kind === 'start'){
+    const d = document.createElement('article'); d.className = 'msg skipmark startmark'; d.dataset.id = m.id;
+    d.innerHTML = '<span>시작 장면 · ' + esc([m.startTime, m.startPlace, m.startSit].filter(Boolean).join(' · ')) + '</span>';
+    return d;
+  }
   if(m.kind === 'skip'){
     const d = document.createElement('article'); d.className = 'msg skipmark'; d.dataset.id = m.id;
     d.innerHTML = '<span>' + esc(m.skipTo) + '(으)로 건너뜀' + (m.skipNote ? ' · ' + esc(m.skipNote) : '') + '</span>';
@@ -1617,7 +1689,7 @@ const MODE_TXT = {dialogue:'대사 위주. 묘사는 꼭 필요한 만큼만', b
 function buildContext(s, prior, extra, direction){
   const c = charOf(s);
   let h = recentSlice(s, prior).filter(m => m.text && m.text.trim())
-    .map(m => ({role: m.role === 'user' ? 'user' : 'assistant', text: m.kind === 'skip' ? skipPrompt(m) : m.text}));
+    .map(m => ({role: m.role === 'user' ? 'user' : 'assistant', text: m.kind === 'skip' ? skipPrompt(m) : m.kind === 'start' ? startPrompt(m) : m.text}));
   if(!h.length) h.push({role:'user', text: expand(START, c)});
   else if(h[0].role !== 'user') h.unshift({role:'user', text: s.mem.chunks.length ? CONT : '(이야기를 시작한다.)'});
   if(extra) h.push({role:'user', text: expand(extra, c)});
@@ -2374,6 +2446,7 @@ function openSheet(id){
   $('#menu').hidden = true;
   if(id === 'shSet') fillSettings();
   if(id === 'shChars') renderChars();
+  if(id === 'shNew') newHint();
   if(id === 'shSess') renderSessions();
   if(id === 'shMem') fillMem();
   if(id === 'shNote') fillNote();
@@ -2420,27 +2493,173 @@ document.addEventListener('click', e => {
 });
 
 /* ================= 캐릭터 목록 ================= */
+/* ================= 대화 홈 ================= */
+const DOTS = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
+function ago(t){
+  const d = Date.now() - t, m = Math.floor(d / 60000);
+  if(m < 1) return '방금'; if(m < 60) return m + '분 전';
+  const hh = Math.floor(m / 60); if(hh < 24) return hh + '시간 전';
+  const days = Math.floor(hh / 24); if(days === 1) return '어제'; if(days < 7) return days + '일 전';
+  const x = new Date(t); return (x.getMonth() + 1) + '/' + x.getDate();
+}
+const lineOf = t => String(t || '').replace(/\[\[[\s\S]*?\]\]/g, '').replace(/[*_#>`]/g, '').replace(/\s+/g, ' ').trim();
+function allSessions(){ return Object.values(state.sessions).filter(s => state.chars.some(c => c.id === s.charId)).sort((a, b) => b.updated - a.updated); }
+function isOpenSess(s){ const c = state.chars.find(x => x.id === s.charId); return !!c && c.id === state.active && c.session === s.id; }
+function sessRow(s, withWorld){
+  const c = state.chars.find(x => x.id === s.charId);
+  const last = [...s.msgs].reverse().find(m => m.text && !m.kind);
+  return '<div class="srow' + (isOpenSess(s) ? ' on' : '') + '" data-sid="' + esc(s.id) + '">'
+    + '<button class="cpick" data-open="1">' + (withWorld ? avHTML(c.img, avatarOf(c)) : '')
+    + '<span class="ctext"><b>' + (s.pinned ? '<span class="tagpin">고정</span>' : '') + esc(s.title) + '</b>'
+    + '<small>' + (withWorld ? esc(c.name) + ' · ' : '') + turnCount(s.msgs) + '턴 · ' + ago(s.updated) + (isOpenSess(s) ? ' · 지금 대화' : '') + '</small>'
+    + (last ? '<small class="pv">' + esc(lineOf(last.text).slice(0, 60)) + '</small>' : '') + '</span></button>'
+    + '<button class="ib" data-more="1" aria-label="' + esc(s.title) + ' 관리">' + DOTS + '</button></div>';
+}
 function renderChars(){
-  const box = $('#charList'); box.textContent = '';
-  state.chars.forEach(c => {
-    const n = charSessions(c.id).length;
-    const row = document.createElement('div'); row.className = 'crow' + (c.id === state.active ? ' on' : '');
-    row.innerHTML = '<button class="cpick" data-pick="' + esc(c.id) + '"><span class="av">' + esc(avatarOf(c)) + '</span>'
-      + '<span class="ctext"><b>' + esc(c.name) + '</b><small>' + (n ? '대화 ' + n + '개' : '대화 없음') + ' · ' + esc((c.prompt || '').replace(/\s+/g, ' ').slice(0, 50)) + '</small></span></button>'
-      + '<button class="ib" data-edit="' + esc(c.id) + '" aria-label="' + esc(c.name) + ' 편집">'
-      + '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>';
-    box.appendChild(row);
+  const box = $('#charList'), q = $('#homeQ').value.trim().toLowerCase();
+  const all = allSessions();
+  let html = '';
+  if(q){
+    const hits = all.filter(s => {
+      const c = state.chars.find(x => x.id === s.charId);
+      return s.title.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || s.msgs.some(m => m.text.toLowerCase().includes(q));
+    });
+    html = '<div class="hsec">찾은 대화 ' + hits.length + '개</div>' + (hits.length ? hits.map(s => sessRow(s, true)).join('') : '<div class="hint">맞는 대화가 없어요.</div>');
+  } else {
+    const pins = all.filter(s => s.pinned);
+    if(pins.length) html += '<div class="hsec">고정</div>' + pins.map(s => sessRow(s, true)).join('');
+    const rec = all.filter(s => !s.pinned && s.msgs.some(m => m.role === 'user')).slice(0, 5);
+    if(rec.length) html += '<div class="hsec">최근</div>' + rec.map(s => sessRow(s, true)).join('');
+    html += '<div class="hsec">세계관</div>' + state.chars.map(c => {
+      const list = charSessions(c.id);
+      return '<details class="wgrp"' + (c.id === state.active ? ' open' : '') + ' data-cid="' + esc(c.id) + '"><summary>' + avHTML(c.img, avatarOf(c))
+        + '<span class="ctext"><b>' + esc(c.name) + '</b><small>' + (list.length ? '대화 ' + list.length + '개 · ' + ago(list[0].updated) : '대화 없음') + '</small></span>'
+        + '<button class="ib" data-wedit="1" aria-label="' + esc(c.name) + ' 편집"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>'
+        + '<button class="btn sm" data-wnew="1" type="button">+ 새 대화</button></summary>'
+        + '<div class="wbody">' + (list.length ? list.map(s => sessRow(s, false)).join('') : '<div class="hint">아직 대화가 없어요.</div>') + '</div></details>';
+    }).join('');
+  }
+  box.innerHTML = html;
+}
+$('#homeQ').addEventListener('input', renderChars);
+function sessListClick(e){
+  const wb = e.target.closest('[data-wedit],[data-wnew]');
+  if(wb){
+    e.preventDefault();
+    const cid = wb.closest('[data-cid]').dataset.cid;
+    if(wb.dataset.wedit) openEditor(cid); else openNew(cid);
+    return;
+  }
+  const row = e.target.closest('[data-sid]'); if(!row) return;
+  const sid = row.dataset.sid;
+  if(e.target.closest('[data-more]')) openAct(sid);
+  else if(e.target.closest('[data-open]')) openSessionById(sid);
+}
+$('#charList').addEventListener('click', sessListClick);
+$('#btnChars').onclick = () => { $('#homeQ').value = ''; openSheet('shChars'); };
+$('#newChar').onclick = () => openEditor(null);
+$('#homeNew').onclick = () => openNew(state.active);
+
+/* 대화 관리 */
+let actSid = null;
+function openAct(sid){
+  const s = state.sessions[sid]; if(!s) return;
+  actSid = sid; const c = state.chars.find(x => x.id === s.charId);
+  $('#actTitle').textContent = s.title;
+  $('#actInfo').textContent = c.name + ' · ' + turnCount(s.msgs) + '턴' + (s.mem.chunks.length ? ' · 요약 ' + s.mem.chunks.length + '개' : '') + ' · 시작 ' + dateLabel(s.created) + ' · 마지막 ' + dateLabel(s.updated);
+  $('#actName').value = s.title;
+  $('#actPin').textContent = s.pinned ? '고정 풀기' : '맨 위에 고정';
+  $('#shAct [data-a="open"]').hidden = isOpenSess(s);
+  openSheet('shAct');
+}
+function refreshLists(){ if(stack.includes('shChars')) renderChars(); if(stack.includes('shSess')) renderSessions(); }
+$('#actRename').onclick = () => {
+  const s = state.sessions[actSid], v = $('#actName').value.trim(); if(!s || !v) return;
+  s.title = v; persist(); $('#actTitle').textContent = v; refreshLists(); renderHeader(); toast('이름을 바꿨어요');
+};
+$('#actName').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); $('#actRename').click(); } });
+function dupSession(s){
+  const cp = JSON.parse(JSON.stringify(s)); cp.id = uid(); cp.title = s.title + ' 사본'; cp.created = cp.updated = Date.now(); cp.pinned = false; cp.ooc = [];
+  state.sessions[cp.id] = cp; return cp;
+}
+let undoTimer = null, undoFn = null;
+function showUndo(text, fn){
+  undoFn = fn; $('#undoText').textContent = text; $('#undoBar').hidden = false;
+  clearTimeout(undoTimer); undoTimer = setTimeout(() => { $('#undoBar').hidden = true; undoFn = null; }, 7000);
+}
+$('#undoBtn').onclick = () => { const f = undoFn; undoFn = null; $('#undoBar').hidden = true; clearTimeout(undoTimer); if(f) f(); };
+function deleteSession(sid){
+  const s = state.sessions[sid]; if(!s) return;
+  if(busy && cur().id === sid){ toast('생성이 끝난 뒤에 지워 주세요'); return; }
+  const c = state.chars.find(x => x.id === s.charId), wasCur = !!c && c.session === sid;
+  delete state.sessions[sid];
+  if(wasCur){ const nx = charSessions(c.id)[0]; c.session = nx ? nx.id : null; }
+  persist(); renderAll(); refreshLists();
+  showUndo('"' + s.title + '" 대화를 지웠어요', () => {
+    state.sessions[sid] = s; if(wasCur && c){ const tmp = c.session && state.sessions[c.session]; if(tmp && tmp.id !== sid && !tmp.msgs.some(m => m.role === 'user')) delete state.sessions[tmp.id]; c.session = sid; }
+    persist(); renderAll(); refreshLists(); toast('되돌렸어요');
   });
 }
-$('#charList').addEventListener('click', e => {
-  const p = e.target.closest('[data-pick]'), ed = e.target.closest('[data-edit]');
-  if(p){
-    if(busy){ toast('생성이 끝난 뒤에 바꿔 주세요'); return; }
-    state.active = p.dataset.pick; persist(); hideErr(); renderAll(); closeSheet('shChars');
-  } else if(ed){ openEditor(ed.dataset.edit); }
+$('#shAct').addEventListener('click', e => {
+  const b = e.target.closest('[data-a]'); if(!b) return;
+  const s = state.sessions[actSid]; if(!s) return;
+  const a = b.dataset.a;
+  if(a === 'open'){ openSessionById(s.id); }
+  else if(a === 'pin'){ s.pinned = !s.pinned; persist(); closeSheet('shAct'); refreshLists(); toast(s.pinned ? '맨 위에 고정했어요' : '고정을 풀었어요'); }
+  else if(a === 'dup'){ dupSession(s); persist(); closeSheet('shAct'); refreshLists(); toast('사본을 만들었어요'); }
+  else if(a === 'txt'){ download(charOf(s).name + '-' + s.title + '-' + stamp() + '.txt', chatText(s)); toast('텍스트 파일을 저장했어요'); }
+  else if(a === 'del'){ closeSheet('shAct'); deleteSession(s.id); }
+  else if(a === 'reset'){
+    if(busy){ toast('생성이 끝난 뒤에 해 주세요'); return; }
+    openSessionById(s.id); setTimeout(openReset, 380);
+  }
 });
-$('#btnChars').onclick = () => openSheet('shChars');
-$('#newChar').onclick = () => openEditor(null);
+
+/* 새 대화 */
+function openNew(cid){
+  $('#nwWorld').innerHTML = state.chars.map(c => '<option value="' + esc(c.id) + '"' + (c.id === cid ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('');
+  ['nwTitle','nwTime','nwPlace','nwSit'].forEach(id => { $('#' + id).value = ''; });
+  fillNewPc(); openSheet('shNew');
+}
+function fillNewPc(){
+  const c = state.chars.find(x => x.id === $('#nwWorld').value) || activeChar();
+  const def = pcOf(c, null);
+  $('#nwPc').innerHTML = '<option value="">기본 PC (' + esc(def.name || '나') + ')</option>' + state.pcs.map(p => '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>').join('');
+  $('#nwTitle').placeholder = '대화 ' + (charSessions(c.id).length + 1);
+  newHint();
+}
+function newHint(){
+  const c = state.chars.find(x => x.id === $('#nwWorld').value) || activeChar();
+  const has = ['nwTime','nwPlace','nwSit'].some(id => $('#' + id).value.trim());
+  $('#nwHint').textContent = has ? '이 장면으로 첫 답변을 바로 받아요.' : (c.greeting && c.greeting.trim() ? '비워 두면 세계관의 첫 메시지로 시작해요.' : '비워 두면 빈 대화로 시작해요. 첫 메시지를 직접 써서 시작하면 돼요.');
+}
+$('#nwWorld').onchange = fillNewPc;
+['nwTime','nwPlace','nwSit'].forEach(id => $('#' + id).addEventListener('input', newHint));
+function startPrompt(m){
+  return '[시작 장면(OOC): 이야기를 여기서 시작한다. ' + (m.startTime ? '시간: ' + m.startTime + '. ' : '') + (m.startPlace ? '장소: ' + m.startPlace + '. ' : '')
+    + (m.startSit ? '상황: ' + m.startSit + '. ' : '') + '이 설정대로 첫 장면을 열고, PC가 반응할 여지를 남기고 끝낸다.]';
+}
+$('#nwGo').onclick = () => {
+  if(busy){ toast('생성이 끝난 뒤에 해 주세요'); return; }
+  const c = state.chars.find(x => x.id === $('#nwWorld').value); if(!c) return;
+  const time = $('#nwTime').value.trim(), place = $('#nwPlace').value.trim(), sit = $('#nwSit').value.trim();
+  charSessions(c.id).forEach(x => { if(!x.pinned && !x.msgs.some(m => m.role === 'user') && !(x.mem.pinned || '').trim() && !(x.events || []).length && !x.ooc.length) delete state.sessions[x.id]; });
+  if(c.session && !state.sessions[c.session]) c.session = null;
+  const s = newSession(c, $('#nwTitle').value.trim() || undefined);
+  s.pcId = $('#nwPc').value;
+  const hasStart = !!(time || place || sit);
+  if(hasStart){
+    s.msgs = [];
+    s.scene = (time || place) ? {time, place, people:[pcName(c, s)]} : null;
+    s.msgs.push({id:uid(), role:'user', kind:'start', startTime:time, startPlace:place, startSit:sit, text:'(시작 장면: ' + [time, place, sit].filter(Boolean).join(' / ') + ')'});
+  } else if(s.msgs[0] && c.greeting) s.msgs[0].text = expand(c.greeting, c, s);
+  state.active = c.id; c.session = s.id;
+  persist(true); hideErr();
+  if(stack.length) closeTopSheets(stack.length);
+  renderAll();
+  if(hasStart && ready()) setTimeout(() => generate(), 400);
+  else toast('새 대화를 시작했어요');
+};
 
 /* ================= 캐릭터 편집 ================= */
 let editId = null, edLore = [], edPcVal = '', edCast = [], edPromptBackup = '', edImgVal = '';
@@ -2652,45 +2871,14 @@ $('#edDel').onclick = () => {
 
 /* ================= 대화 목록 ================= */
 function renderSessions(){
-  const c = activeChar(), box = $('#sessList'); box.textContent = '';
-  $('#sessTitle').textContent = c.name + ' 대화';
-  const list = charSessions(c.id);
-  if(!list.length){ box.innerHTML = '<div class="hint">아직 대화가 없어요.</div>'; return; }
-  list.forEach(s => {
-    const row = document.createElement('div'); row.className = 'crow' + (s.id === c.session ? ' on' : ''); row.dataset.sid = s.id;
-    const last = [...s.msgs].reverse().find(m => m.text);
-    row.innerHTML = '<button class="cpick" data-open="1"><span class="ctext"><b>' + esc(s.title) + '</b><small>'
-      + turnCount(s.msgs) + '턴 · 요약 ' + s.mem.chunks.length + '개 · ' + dateLabel(s.updated) + (last ? ' · ' + esc(last.text.replace(/\s+/g, ' ').slice(0, 40)) : '') + '</small></span></button>'
-      + '<button class="ib" data-ren="1" aria-label="이름 바꾸기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>'
-      + '<button class="btn sm danger" data-del="1">삭제</button>';
-    box.appendChild(row);
-  });
+  const c = activeChar();
+  $('#sessTitle').textContent = c.name;
+  const list = charSessions(c.id).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updated - a.updated);
+  $('#sessList').innerHTML = list.length ? list.map(s => sessRow(s, false)).join('') : '<div class="hint">아직 대화가 없어요.</div>';
 }
-$('#sessList').addEventListener('click', e => {
-  const row = e.target.closest('[data-sid]'); if(!row) return;
-  const s = state.sessions[row.dataset.sid], c = activeChar();
-  if(e.target.closest('[data-open]')){
-    if(busy){ toast('생성이 끝난 뒤에 바꿔 주세요'); return; }
-    c.session = s.id; persist(); hideErr(); renderAll(); closeSheet('shSess');
-  } else if(e.target.closest('[data-ren]')){
-    const pick = row.querySelector('.cpick');
-    const inp = document.createElement('input'); inp.className = 'in'; inp.value = s.title; inp.maxLength = 40;
-    pick.replaceWith(inp); inp.focus(); inp.select();
-    const done = () => { const v = inp.value.trim(); if(v){ s.title = v; persist(); } renderSessions(); renderHeader(); };
-    inp.addEventListener('blur', done); inp.addEventListener('keydown', ev => { if(ev.key === 'Enter'){ ev.preventDefault(); inp.blur(); } });
-  } else if(e.target.closest('[data-del]')){
-    const b = e.target.closest('[data-del]');
-    if(busy && s.id === c.session){ toast('생성이 끝난 뒤에 지워 주세요'); return; }
-    if(!armConfirm(b, '한 번 더', '삭제', 2500)) return;
-    delete state.sessions[s.id];
-    if(c.session === s.id) c.session = null;
-    persist(); renderSessions(); renderAll(); toast('대화를 지웠어요');
-  }
-});
-$('#newSess').onclick = () => {
-  if(busy){ toast('생성이 끝난 뒤에 해 주세요'); return; }
-  newSession(activeChar()); persist(); renderAll(); closeSheet('shSess'); toast('새 대화를 시작했어요');
-};
+$('#sessList').addEventListener('click', sessListClick);
+$('#newSess').onclick = () => openNew(state.active);
+$('#sessAll').onclick = () => { closeSheet('shSess'); setTimeout(() => { $('#homeQ').value = ''; openSheet('shChars'); }, 350); };
 
 /* ================= 기억 시트 ================= */
 function contextSize(){
@@ -2756,7 +2944,7 @@ $('#chunkList').addEventListener('click', e => {
 });
 $('#memSumNow').onclick = () => summarize(cur(), true);
 $('#btnMem').onclick = () => openSheet('shMem');
-$('#btnWho').onclick = () => openSheet('shMem');
+$('#btnWho').onclick = () => openSheet('shSess');
 
 /* ================= PC 목록 ================= */
 function pcOptions(sel, emptyLabel){
@@ -3350,13 +3538,8 @@ $('#packFile').onchange = async e => {
 
 /* ================= 메뉴 ================= */
 $('#btnMenu').onclick = () => { $('#menu').hidden = !$('#menu').hidden; };
-$('#mSess').onclick = () => openSheet('shSess');
-$('#mNew').onclick = () => {
-  if(busy){ toast('생성이 끝난 뒤에 해 주세요'); return; }
-  newSession(activeChar()); persist(); renderAll(); $('#menu').hidden = true; hideErr();
-  toast('새 대화를 시작했어요. 이전 대화는 대화 목록에 있어요');
-};
-$('#mReset').onclick = () => {
+$('#mReset').onclick = () => openReset();
+function openReset(){
   if(busy){ toast('생성이 끝난 뒤에 해 주세요'); return; }
   const s = cur(), c = charOf(s);
   $('#rsInfo').textContent = '지금 ' + turnCount(s.msgs) + '턴' + (s.mem.chunks.length ? ' · 요약 ' + s.mem.chunks.length + '개' : '') + (c.greeting && c.greeting.trim() ? ' · 첫 메시지부터 다시 시작해요' : ' · 빈 대화로 시작해요');
@@ -3364,7 +3547,7 @@ $('#mReset').onclick = () => {
   $('#rsPinned').closest('label').hidden = !(s.mem.pinned && s.mem.pinned.trim());
   $('#rsEvents').closest('label').hidden = !(s.events && s.events.length);
   openSheet('shReset');
-};
+}
 $('#rsGo').onclick = () => {
   if(busy){ toast('생성이 끝난 뒤에 해 주세요'); return; }
   const s = cur(), c = charOf(s);
@@ -3384,9 +3567,9 @@ $('#rsGo').onclick = () => {
   s.updated = Date.now(); persist(true); closeSheet('shReset'); renderAll();
   toast($('#rsCopy').checked ? '처음으로 되돌렸어요. 이전 내용은 대화 목록에 사본으로 있어요' : '처음으로 되돌렸어요', 4000);
 };
-function chatText(){
-  const s = cur(), c = charOf(s);
-  return '# ' + c.name + ' — ' + s.title + '\n\n' + s.msgs.map(m => (m.role === 'user' ? pcName(c) : c.name) + ':\n' + m.text).join('\n\n');
+function chatText(s){
+  s = s || cur(); const c = charOf(s);
+  return '# ' + c.name + ' — ' + s.title + '\n\n' + s.msgs.map(m => (m.role === 'user' ? pcName(c, s) : c.name) + ':\n' + m.text).join('\n\n');
 }
 $('#mCopy').onclick = () => { copyText(chatText()); $('#menu').hidden = true; };
 $('#mTxt').onclick = () => { const s = cur(); download(charOf(s).name + '-' + s.title + '-' + stamp() + '.txt', chatText()); $('#menu').hidden = true; toast('텍스트 파일을 저장했어요'); };
