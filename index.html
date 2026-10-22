@@ -162,6 +162,21 @@ hr{border:0;border-top:1px solid var(--line);margin:8px 0 18px}
 .sb-people{display:flex;flex:none}
 .sb-people .av{width:26px;height:26px;font-size:12px;font-weight:700;margin-left:-6px;border:2px solid var(--surface2);background-color:var(--surface)}
 .sb-people .av:first-child{margin-left:0}
+.statbar{display:flex;align-items:center;gap:6px;width:100%;border:0;border-bottom:1px solid var(--line);background:var(--surface2);text-align:left;overflow:hidden;
+  padding:6px max(16px,env(safe-area-inset-right,0px)) 6px max(16px,env(safe-area-inset-left,0px));font-size:12px;color:var(--muted);white-space:nowrap;transition:background .4s}
+.statbar .st-i{flex:none;display:inline-flex;gap:4px;align-items:baseline;max-width:60%;overflow:hidden;text-overflow:ellipsis}
+.statbar .st-i b{color:var(--ink);font-weight:500;overflow:hidden;text-overflow:ellipsis}
+.statbar .st-sep{flex:none;opacity:.5}
+.statbar .st-lock{margin-left:auto;flex:none;font-size:11.5px;border:1px solid var(--line);border-radius:99px;padding:1px 8px}
+.statbar.flash{background:color-mix(in srgb,var(--accent) 18%,var(--surface2))}
+.affrow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.affrow:last-child{border-bottom:0}
+.affrow .nm{flex:1;min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.affrow select{flex:none;width:auto;min-width:96px}
+.affdots{display:inline-flex;gap:3px;margin-left:6px;vertical-align:middle}
+.affdots i{width:6px;height:6px;border-radius:50%;background:var(--line)}
+.affdots i.on{background:var(--accent)}
+.stdef{display:grid;grid-template-columns:1fr 1.4fr auto;gap:6px;margin-bottom:6px;align-items:center}
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .seg button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:13px}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:700}
@@ -256,6 +271,7 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
   </header>
 
   <button class="scenebar" id="sceneBar" hidden aria-label="현재 장면 고치기"><span class="sb-text" id="sbText"></span><span class="sb-people" id="sbPeople"></span></button>
+  <button class="statbar" id="statBar" hidden aria-label="상태창 열기"></button>
   <div class="bar" id="notice" hidden><span>API 키를 넣으면 대화를 시작할 수 있어요.</span><button id="noticeBtn">설정 열기</button></div>
   <div class="bar" id="err" hidden><span id="errText"></span><button class="retry" id="errRetry" hidden>다시 시도</button><button id="errClose" aria-label="닫기">×</button></div>
   <div class="bar" id="bkBar" hidden><span id="bkBarText"></span><button id="bkBarBtn">백업 저장</button></div>
@@ -387,6 +403,35 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
         <input class="in" id="scOthers" placeholder="그 밖의 인물 (쉼표로 구분)">
       </div>
       <label class="check"><input type="checkbox" id="scTrack"> 답변마다 장면 자동 기록</label>
+    </div>
+  </div>
+</section>
+
+<!-- 상태창 -->
+<section class="sheet" id="shStat" aria-label="상태창">
+  <div class="back" data-close="shStat"></div>
+  <div class="panel">
+    <div class="panel-head"><h2>상태창</h2><button class="btn primary" id="stSave" type="button">저장</button></div>
+    <div class="panel-body">
+      <div class="hint" style="margin-bottom:12px">답변에서 값이 바뀌면 자동으로 고쳐져요. 틀렸으면 여기서 고치면 다음 답변부터 반영돼요.</div>
+      <div id="stVals"></div>
+      <details class="card" id="stAffBox" style="margin-top:6px">
+        <summary><b style="flex:1">호감도</b><span class="hint">PC는 모르는 정보 · 눌러서 보기</span></summary>
+        <div style="padding:4px 12px 10px">
+          <div class="hint" style="margin-bottom:6px">각 인물이 PC를 어떻게 여기는지예요. 이야기 속에서는 수치나 단계로 드러나지 않고 태도로만 보여요.</div>
+          <div id="stAff"></div>
+          <div class="split" style="margin-top:8px"><select class="in" id="stAffAdd"></select><button class="btn" id="stAffAddBtn" type="button">인물 추가</button></div>
+        </div>
+      </details>
+      <details class="card" style="margin-top:10px">
+        <summary><b style="flex:1">항목 편집</b><span class="hint">이 세계관 공통</span></summary>
+        <div style="padding:4px 12px 12px">
+          <div class="hint" style="margin-bottom:8px">설명은 모델에게 주는 기준이에요. 예: "PC의 현금. 원 단위"</div>
+          <div id="stDefs"></div>
+          <div class="split" style="margin-top:4px"><button class="btn" id="stDefAdd" type="button">항목 추가</button></div>
+          <label class="check" style="margin-top:10px"><input type="checkbox" id="stAffOn"> 호감도 사용</label>
+        </div>
+      </details>
     </div>
   </div>
 </section>
@@ -1081,6 +1126,8 @@ function normalize(st){
       img:String(k.img || ''), short:String(k.short || ''), detail:String(k.detail || ''), always:!!k.always, fromSplit:!!k.fromSplit})) : [],
     secrets:Array.isArray(c.secrets) ? c.secrets.map(x => ({id:String(x.id || uid()), title:String(x.title || ''), detail:String(x.detail || ''), knownBy0:String(x.knownBy0 || ''), owner:String(x.owner || '')})) : [],
     img:String(c.img || ''), promptBackup:String(c.promptBackup || ''),
+    status:Array.isArray(c.status) ? c.status.map(x => ({id:String(x.id || uid()), label:String(x.label || ''), hint:String(x.hint || '')})).filter(x => x.label.trim()) : [],
+    affinity:!!c.affinity,
     session:c.session || null
   }));
   if(!st.sessions || typeof st.sessions !== 'object') st.sessions = {};
@@ -1095,6 +1142,7 @@ function normalize(st){
     s.title = s.title || '대화'; s.created = s.created || Date.now(); s.updated = s.updated || s.created; s.draft = s.draft || '';
     s.pcId = String(s.pcId || '');
     s.scene = s.scene && typeof s.scene === 'object' ? s.scene : null;
+    s.stat = s.stat && typeof s.stat === 'object' ? s.stat : null;
     s.secretState = s.secretState && typeof s.secretState === 'object' ? s.secretState : {};
     s.extraSecrets = Array.isArray(s.extraSecrets) ? s.extraSecrets : [];
     s.style = Object.assign({len:'auto', mode:'auto'}, s.style || {});
@@ -1202,7 +1250,7 @@ function applyFont(){ document.documentElement.style.setProperty('--fs', S.font 
 function renderHeader(){
   const c = activeChar(), s = cur();
   const hav = $('#hAv'); hav.textContent = c.img ? '' : avatarOf(c); hav.style.backgroundImage = c.img ? 'url(' + c.img + ')' : '';
-  renderSceneBar(); updateStyleChip();
+  renderSceneBar(); renderStatBar(); updateStyleChip();
   $('#hName').textContent = c.name + (charSessions(c.id).length > 1 ? ' · ' + s.title : '');
   const sub = $('#hSub');
   if(summarizing.has(s.id)){ sub.textContent = '기억 정리 중…'; sub.classList.add('working'); }
@@ -1341,6 +1389,62 @@ function currentScene(s){
 function setScene(s, sc){
   for(let i = s.msgs.length - 1; i >= 0; i--){ const m = s.msgs[i]; if(m.role === 'assistant'){ m.scene = sc; if(m.altScenes) m.altScenes[m.ai || 0] = sc; return; } }
   s.scene = sc;
+}
+/* 상태창: 값은 답변마다 스냅숏으로 저장(다시 생성·삭제해도 맞게 되돌아감) */
+const AFF_LV = ['적대','경계','무관심','호감','신뢰','애정'];
+const STAT_RE = /\[\[\s*상태\s*[:：]([^\]]*)\]\]/g;
+const AFF_RE = /\[\[\s*호감(?:도)?\s*[:：]([^\]]*)\]\]/g;
+function takeStat(text){
+  const v = [], a = []; let m;
+  const pairs = body => body.split(/[|｜\n]|[,，;；](?=[^,，;；=＝|｜]*[=＝])/).map(x => x.trim()).filter(Boolean).map(x => { const i = x.search(/[=＝:：]/); return i > 0 ? [x.slice(0, i).trim(), x.slice(i + 1).trim()] : null; }).filter(Boolean);
+  STAT_RE.lastIndex = 0; while((m = STAT_RE.exec(text))) v.push(...pairs(m[1]));
+  AFF_RE.lastIndex = 0; while((m = AFF_RE.exec(text))) a.push(...pairs(m[1]));
+  return {text:String(text).replace(STAT_RE, '').replace(AFF_RE, ''), v, a};
+}
+function statOf(s, msgs){
+  msgs = msgs || s.msgs;
+  for(let i = msgs.length - 1; i >= 0; i--){ const m = msgs[i]; if(m.role === 'assistant' && m.stat) return m.stat; }
+  return s.stat || {v:{}, a:{}};
+}
+const currentStat = s => statOf(s, s.msgs);
+function setStat(s, st){
+  for(let i = s.msgs.length - 1; i >= 0; i--){ const m = s.msgs[i]; if(m.role === 'assistant'){ m.stat = st; if(m.altStats) m.altStats[m.ai || 0] = st; return; } }
+  s.stat = st;
+}
+function affLevel(t){
+  t = String(t || '').trim(); if(!t) return '';
+  const hit = AFF_LV.find(l => t.includes(l)); return hit || '';
+}
+/* 태그를 이전 값에 합쳐 새 스냅숏을 만든다. 바뀐 게 없으면 null */
+function mergeStat(c, base, ts){
+  if(!ts.v.length && !ts.a.length) return null;
+  const st = {v:Object.assign({}, base.v), a:Object.assign({}, base.a)};
+  let ch = false;
+  ts.v.forEach(([k, val]) => {
+    const d = c.status.find(x => x.label === k) || c.status.find(x => x.label.replace(/\s/g, '').includes(k.replace(/\s/g, '')) || k.replace(/\s/g, '').includes(x.label.replace(/\s/g, '')));
+    if(d && val && st.v[d.id] !== val){ st.v[d.id] = val; ch = true; }
+  });
+  if(c.affinity) ts.a.forEach(([k, val]) => {
+    const kk = castFind(c, k), lv = affLevel(val);
+    if(kk && lv && st.a[kk.id] !== lv){ st.a[kk.id] = lv; ch = true; }
+  });
+  return ch ? st : null;
+}
+function statPrompt(c, s, prior, onIds){
+  const out = [];
+  const st = statOf(s, prior);
+  if(c.status.length){
+    out.push('[상태창 — 현재 값]\n' + c.status.map(d => '- ' + d.label + ': ' + (st.v[d.id] || '(아직 없음 — 설정과 진행에 맞게 정해서 적는다)') + (d.hint ? '  ※ ' + d.hint : '')).join('\n')
+      + '\n이번 답변에서 값이 바뀐 항목이 있을 때만 답변 맨 끝(장면 줄 바로 앞)에 [[상태: 항목=새 값 | 항목=새 값]]을 한 줄 붙인다. 바뀐 항목만 적고, 항목 이름은 위와 똑같이 쓴다. 이 줄은 화면에 보이지 않는다.');
+  }
+  if(c.affinity){
+    const pn = pcName(c, s);
+    const list = c.cast.filter(k => onIds.has(k.id));
+    out.push('[호감도 — 진행자만 아는 정보. ' + pn + '는 이 정보를 모른다]\n단계(낮음→높음): ' + AFF_LV.join(' < ') + '\n'
+      + (list.length ? list.map(k => '- ' + k.name + ' → ' + pn + ': ' + (st.a[k.id] || '아직 정해지지 않음')).join('\n') + '\n' : '')
+      + '서술과 대사에 호감도나 단계 이름을 쓰지 않는다. 인물의 태도, 말투, 행동으로만 드러낸다. 의미 있는 일로 어떤 인물의 ' + pn + '에 대한 감정이 달라졌을 때만 답변 맨 끝에 [[호감: 이름=단계]]를 한 줄 붙인다(여러 명이면 | 로 구분). 아직 정해지지 않은 인물은 ' + pn + '와 처음 의미 있게 엮일 때 정해서 적는다. 단계는 한 번에 한 칸씩 움직이는 것이 기본이다.');
+  }
+  return out;
 }
 /* 이번 답변에 자세히 보낼 인물: 장면에 있거나, 최근 대화에 이름이 나왔거나, '항상 자세히' */
 function activeCast(c, s, prior, extra){
@@ -1543,6 +1647,7 @@ function systemParts(s, prior, extra){
   if(m.pinned && m.pinned.trim()) parts.push('[유저 노트 · 이 대화 — 반드시 지킬 것]\n' + expand(m.pinned, c, s).trim());
   const pins = c.lore.filter(l => l.pin && l.text.trim());
   if(pins.length) parts.push(pins.map(l => '[' + (l.keys.split(/[,，]/)[0].trim() || '규칙') + ' — 반드시 지킬 것]\n' + expand(l.text, c, s).trim()).join('\n\n'));
+  parts.push(...statPrompt(c, s, prior, onIds));
   if(S.sceneTrack) parts.push('[장면 기록 — 출력 형식]\n답변을 다 쓴 뒤 맨 마지막 줄에 아래 형식으로 장면 정보를 한 줄 붙인다. 이 줄은 화면에 보이지 않고 기록에만 쓰인다.\n[[장면: 날짜·시간대 | 장소 | 이 답변이 끝난 시점에 장면에 있는 인물(' + pn + ' 포함, 쉼표로 구분)]]');
   return {head, rest: parts.filter(Boolean).join('\n\n').replace(/\{\{user\}\}/gi, pn)};
 }
@@ -1725,8 +1830,9 @@ async function generate(opt){
   const sysParts = systemParts(s, prior, opt.extra);
   const sys = systemText(s, prior, opt.extra);
   let am, prevText = '';
-  let prevScene = null;
-  if(target){ am = target; prevText = am.text; prevScene = am.scene || null; if(!am.alts){ am.alts = [am.text]; am.ai = 0; } if(!am.altScenes) am.altScenes = am.alts.map((x, j) => j === (am.ai || 0) ? prevScene : null); am.text = ''; }
+  let prevScene = null, prevStat = null;
+  const baseStat = statOf(s, prior);
+  if(target){ am = target; prevText = am.text; prevScene = am.scene || null; prevStat = am.stat || null; if(!am.alts){ am.alts = [am.text]; am.ai = 0; } if(!am.altScenes) am.altScenes = am.alts.map((x, j) => j === (am.ai || 0) ? prevScene : null); if(!am.altStats) am.altStats = am.alts.map((x, j) => j === (am.ai || 0) ? prevStat : null); am.text = ''; }
   else { am = {id:uid(), role:'assistant', text:''}; msgs.push(am); }
   streamingId = am.id; busy = true; abortCtl = new AbortController();
   renderLog();
@@ -1749,20 +1855,24 @@ async function generate(opt){
     clearInterval(tick);
     busy = false; streamingId = null; abortCtl = null;
     const ev = takeEvents(am.text);
-    const sp = splitScene(ev.text); am.text = sp.text;
+    const tst = takeStat(ev.text);
+    const sp = splitScene(tst.text); am.text = sp.text;
+    let statChanged = false;
     if(am.text && ev.ids.length){
       const fired = (s.events || []).filter(e => ev.ids.includes(e.n) && e.status !== 'done');
       fired.forEach(e => { e.status = 'done'; e.doneTurn = turnCount(msgs); });
       if(fired.length) setTimeout(() => toast('예약한 사건이 일어났어요: ' + fired.map(e => e.text).join(', '), 4500), 300);
     }
     if(am.text) am.scene = sp.scene || (target ? prevScene : null) || null;
+    if(am.text){ const ns = mergeStat(charOf(s), baseStat, tst); am.stat = ns || null; statChanged = !!(ns && ts_visible(charOf(s), baseStat, ns)); }
     if(target){
-      if(am.text){ am.alts.push(am.text); am.altScenes.push(am.scene); am.ai = am.alts.length - 1; }
-      else { am.text = prevText; am.scene = prevScene; }
+      if(am.text){ am.alts.push(am.text); am.altScenes.push(am.scene); am.altStats.push(am.stat); am.ai = am.alts.length - 1; }
+      else { am.text = prevText; am.scene = prevScene; am.stat = prevStat; }
     } else if(!am.text){
       const i = msgs.indexOf(am); if(i >= 0) msgs.splice(i, 1);
     }
     touch(s); renderLog(); renderHeader();
+    if(statChanged) flashStat();
   }
   if(ok && S.pcGuard && S.pcAuto && !opt.autoRetried){
     const last = s.msgs[s.msgs.length - 1];
@@ -2013,7 +2123,7 @@ $('#log').addEventListener('click', e => {
   else if(act === 'prev' || act === 'next'){
     if(busy || !m.alts) return;
     m.ai = clamp((m.ai || 0) + (act === 'next' ? 1 : -1), 0, m.alts.length - 1);
-    m.text = m.alts[m.ai]; if(m.altScenes) m.scene = m.altScenes[m.ai] || null; touch(s); renderLog(); renderSceneBar();
+    m.text = m.alts[m.ai]; if(m.altScenes) m.scene = m.altScenes[m.ai] || null; if(m.altStats) m.stat = m.altStats[m.ai] || null; touch(s); renderLog(); renderSceneBar(); renderStatBar();
   }
   else if(act === 'del'){
     if(busy) return;
@@ -2055,7 +2165,7 @@ function branchFrom(s, m){
   const c = charOf(s), i = s.msgs.indexOf(m);
   const ns = {id:uid(), charId:c.id, pcId:s.pcId || '', title: s.title + ' 분기', created:Date.now(), updated:Date.now(),
     msgs: JSON.parse(JSON.stringify(s.msgs.slice(0, i + 1))), mem: JSON.parse(JSON.stringify(s.mem)), draft:'',
-    scene: s.scene ? JSON.parse(JSON.stringify(s.scene)) : null, secretState: JSON.parse(JSON.stringify(s.secretState || {})),
+    scene: s.scene ? JSON.parse(JSON.stringify(s.scene)) : null, stat: s.stat ? JSON.parse(JSON.stringify(s.stat)) : null, secretState: JSON.parse(JSON.stringify(s.secretState || {})),
     extraSecrets: JSON.parse(JSON.stringify(s.extraSecrets || [])), style: Object.assign({}, s.style),
     events: JSON.parse(JSON.stringify(s.events || [])), ooc: []};
   const ui = uptoIdx(s);
@@ -2087,6 +2197,7 @@ function openSheet(id){
   if(id === 'shMem') fillMem();
   if(id === 'shNote') fillNote();
   if(id === 'shScene') fillScene();
+  if(id === 'shStat') fillStat();
   if(id === 'shEvent') renderEvents();
   if(id === 'shOoc') renderOoc();
   if(id === 'shSkip'){ $('#skTo').value = ''; $('#skNote').value = ''; }
@@ -2107,7 +2218,7 @@ function closeSheet(id){
 function popTop(){
   const id = stack.pop(); if(!id) return;
   document.getElementById(id).classList.remove('open');
-  if(['shSet','shMem','shNote','shPc','shScene','shStyle','shSecret','shEvent'].includes(id)){ renderHeader(); if(id !== 'shMem') renderLog(true); }
+  if(['shSet','shMem','shNote','shPc','shScene','shStat','shStyle','shSecret','shEvent'].includes(id)){ renderHeader(); if(id !== 'shMem') renderLog(true); }
   if(id === 'shPc'){ if(stack.includes('shEdit')) fillEdPc(); if(stack.includes('shNote')) fillNote(); if(stack.includes('shSet')) fillDefPc(); }
 }
 window.addEventListener('popstate', () => {
@@ -2534,6 +2645,70 @@ function renderSceneBar(){
   }).join('');
   $('#sceneBar').setAttribute('aria-label', '현재 장면: ' + [sc.time, sc.place, sc.people.join(', ')].filter(Boolean).join(', ') + '. 눌러서 고치기');
 }
+/* ================= 상태창 ================= */
+function ts_visible(c, a, b){ return c.status.some(d => (a.v[d.id] || '') !== (b.v[d.id] || '')); }
+function renderStatBar(){
+  if(!state) return;
+  const bar = $('#statBar'), s = cur(), c = charOf(s);
+  if(!c.status.length && !c.affinity){ bar.hidden = true; return; }
+  bar.hidden = false;
+  const st = currentStat(s);
+  const items = c.status.map(d => '<span class="st-i">' + esc(d.label) + ' <b>' + esc(st.v[d.id] || '–') + '</b></span>');
+  bar.innerHTML = items.join('<span class="st-sep">·</span>') + (c.affinity ? '<span class="st-lock">호감도</span>' : '');
+  bar.setAttribute('aria-label', '상태창: ' + c.status.map(d => d.label + ' ' + (st.v[d.id] || '없음')).join(', ') + '. 눌러서 보기');
+}
+function flashStat(){ const b = $('#statBar'); if(b.hidden) return; b.classList.add('flash'); setTimeout(() => b.classList.remove('flash'), 1600); }
+let stDraft = null;
+function affDots(lv){ const i = AFF_LV.indexOf(lv); return '<span class="affdots" aria-hidden="true">' + AFF_LV.map((x, j) => '<i class="' + (i >= 0 && j <= i ? 'on' : '') + '"></i>').join('') + '</span>'; }
+function fillStat(){
+  const s = cur(), c = charOf(s), st = currentStat(s);
+  stDraft = {v:Object.assign({}, st.v), a:Object.assign({}, st.a), defs:c.status.map(d => Object.assign({}, d)), aff:c.affinity};
+  $('#stAffBox').open = false;
+  renderStatSheet();
+}
+function renderStatSheet(){
+  const s = cur(), c = charOf(s), d = stDraft;
+  $('#stVals').innerHTML = d.defs.length ? d.defs.map(x => '<div class="field"><label class="lbl" for="stv_' + x.id + '">' + esc(x.label || '이름 없는 항목') + '</label><input class="in" id="stv_' + x.id + '" data-sv="' + x.id + '" value="' + esc(d.v[x.id] || '') + '" placeholder="' + esc(x.hint || '') + '"></div>').join('')
+    : '<div class="hint" style="margin-bottom:10px">아직 항목이 없어요. 아래 "항목 편집"에서 추가해 주세요.</div>';
+  $('#stAffBox').hidden = !d.aff;
+  const sc = currentScene(s);
+  const ids = new Set(Object.keys(d.a));
+  if(sc) sc.people.forEach(p => { const k = castFind(c, p); if(k) ids.add(k.id); });
+  const rows = c.cast.filter(k => ids.has(k.id));
+  $('#stAff').innerHTML = rows.length ? rows.map(k => '<div class="affrow"><span class="nm">' + esc(k.name) + affDots(d.a[k.id]) + '</span><select class="in" data-sa="' + k.id + '"><option value="">정해지지 않음</option>'
+    + AFF_LV.map(l => '<option' + (d.a[k.id] === l ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></div>').join('')
+    : '<div class="hint">아직 정해진 인물이 없어요.</div>';
+  $('#stAffAdd').innerHTML = '<option value="">인물 고르기</option>' + c.cast.filter(k => !ids.has(k.id)).map(k => '<option value="' + k.id + '">' + esc(k.name) + (k.group ? ' · ' + esc(k.group) : '') + '</option>').join('');
+  $('#stDefs').innerHTML = d.defs.map((x, i) => '<div class="stdef"><input class="in" data-sd="label" data-i="' + i + '" value="' + esc(x.label) + '" placeholder="항목 이름" aria-label="항목 이름"><input class="in" data-sd="hint" data-i="' + i + '" value="' + esc(x.hint) + '" placeholder="설명(모델용 기준)" aria-label="설명"><button class="btn" data-sdel="' + i + '" type="button" aria-label="항목 삭제">삭제</button></div>').join('');
+  $('#stAffOn').checked = d.aff;
+}
+$('#shStat').addEventListener('input', e => {
+  const t = e.target, d = stDraft; if(!d) return;
+  if(t.dataset.sv) d.v[t.dataset.sv] = t.value;
+  if(t.dataset.sd) d.defs[+t.dataset.i][t.dataset.sd] = t.value;
+});
+$('#shStat').addEventListener('change', e => {
+  const t = e.target, d = stDraft; if(!d) return;
+  if(t.dataset.sa !== undefined){ if(t.value) d.a[t.dataset.sa] = t.value; else delete d.a[t.dataset.sa]; renderStatSheet(); $('#stAffBox').open = true; }
+  if(t.id === 'stAffOn'){ d.aff = t.checked; renderStatSheet(); }
+  if(t.dataset.sd === 'label') renderStatSheet();
+});
+$('#shStat').addEventListener('click', e => {
+  const d = stDraft; if(!d) return;
+  const del = e.target.closest('[data-sdel]');
+  if(del){ const x = d.defs.splice(+del.dataset.sdel, 1)[0]; if(x) delete d.v[x.id]; renderStatSheet(); return; }
+  if(e.target.id === 'stDefAdd'){ d.defs.push({id:uid(), label:'', hint:''}); renderStatSheet(); const ins = $('#stDefs').querySelectorAll('[data-sd="label"]'); ins[ins.length - 1].focus(); return; }
+  if(e.target.id === 'stAffAddBtn'){ const id = $('#stAffAdd').value; if(!id) return; d.a[id] = d.a[id] || '무관심'; renderStatSheet(); $('#stAffBox').open = true; }
+});
+$('#stSave').onclick = () => {
+  const s = cur(), c = charOf(s), d = stDraft; if(!d) return;
+  c.status = d.defs.map(x => ({id:x.id, label:x.label.trim(), hint:x.hint.trim()})).filter(x => x.label);
+  c.affinity = d.aff;
+  const v = {}; c.status.forEach(x => { const val = String(d.v[x.id] || '').trim(); if(val) v[x.id] = val; });
+  setStat(s, {v, a:Object.assign({}, d.a)});
+  stDraft = null; touch(s); persist(true); closeSheet('shStat'); toast('상태창을 저장했어요. 다음 답변부터 반영돼요');
+};
+
 let scSel = [];
 function fillScene(){
   const s = cur(), c = charOf(s), sc = currentScene(s) || {time:'', place:'', people:[]};
@@ -2721,13 +2896,13 @@ $('#oocSend').onclick = async () => {
   const item = {q, a:'…', at:Date.now()}; s.ooc.push(item); if(s.ooc.length > 30) s.ooc.splice(0, s.ooc.length - 30);
   $('#oocQ').value = ''; renderOoc(); oocBusy = true; $('#oocSend').disabled = true;
   try{
-    const sys = systemText(s, msgs).replace(/\[장면 기록 — 출력 형식\][\s\S]*$/, '').replace(/\[예약된 사건 — 진행자만 아는 계획\]/, '[예약된 사건 — 진행자만 아는 계획(질문자에게는 알려도 됨)]');
+    const sys = systemText(s, msgs).replace(/\[장면 기록 — 출력 형식\][\s\S]*$/, '').replace(/\[호감도 — 진행자만 아는 정보[\s\S]*?(?=\n\n\[|$)/, '').replace(/\n이번 답변에서 값이 바뀐 항목이 있을 때만[^\n]*/, '').replace(/\[예약된 사건 — 진행자만 아는 계획\]/, '[예약된 사건 — 진행자만 아는 계획(질문자에게는 알려도 됨)]');
     const hist = buildContext(s, msgs).map(x => Object.assign({}, x));
     const last = hist[hist.length - 1];
     const qtext = '[OOC 질문 — 이야기 밖에서 진행자에게]\n' + q + '\n\n이야기를 이어 쓰지 말고, 진행자로서 이야기 밖에서 짧고 분명하게 답한다. 설정과 지금까지의 진행을 근거로 답하고, 아직 정해지지 않은 부분은 그렇다고 말한 뒤 가능한 방향을 제안한다.';
     if(last.role === 'user') last.text += '\n\n' + qtext; else hist.push({role:'user', text:qtext});
     const out = await complete(sys, hist, {quiet:true, temp:0.7});
-    item.a = splitScene(takeEvents(out).text).text || '(빈 답변)';
+    item.a = splitScene(takeStat(takeEvents(out).text).text).text || '(빈 답변)';
   }catch(err){ item.a = '답을 받지 못했어요. ' + (err && err.message ? err.message : ''); }
   finally{ oocBusy = false; $('#oocSend').disabled = false; touch(s); renderOoc(); }
 };
@@ -2952,6 +3127,8 @@ function importPack(d){
     const ex = state.chars.find(x => x.id === c.id);
     const data = {name:c.name || '이름 없음', avatar:c.avatar || '', prompt:c.prompt || '', greeting:c.greeting || '', pcId:c.pcId || '', note:c.note || '', lore:c.lore || [],
       cast:c.cast || [], secrets:c.secrets || [], img:c.img || '', promptBackup:c.promptBackup || ''};
+    if(Array.isArray(c.status)) data.status = c.status;
+    if('affinity' in c) data.affinity = !!c.affinity;
     if(ex){ Object.assign(ex, data); updC++; } else { state.chars.push(Object.assign({id:c.id, session:null}, data)); addC++; }
     firstId = firstId || c.id;
   });
@@ -3002,6 +3179,7 @@ $('#cNote').onclick = () => openSheet('shNote');
 $('#cStyle').onclick = () => openSheet('shStyle');
 $('#mSecret').onclick = () => openSheet('shSecret');
 $('#sceneBar').onclick = () => openSheet('shScene');
+$('#statBar').onclick = () => openSheet('shStat');
 $('#mEvent').onclick = () => openSheet('shEvent');
 $('#cSkip').onclick = () => { if(!busy) openSheet('shSkip'); };
 $('#cOoc').onclick = () => openSheet('shOoc');

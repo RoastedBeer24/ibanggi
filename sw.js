@@ -1,5 +1,5 @@
 /* 이야기방 서비스 워커: 항상 최신 파일을 먼저 받고, 오프라인일 때만 저장본을 씀 */
-const CACHE = 'ibanggi-v10';
+const CACHE = 'ibanggi-v11';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
