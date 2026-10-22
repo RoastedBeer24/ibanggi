@@ -23,12 +23,13 @@
   --serif:'Gowun Batang','Noto Serif KR','Nanum Myeongjo',serif;
   --sans:'Noto Sans KR',system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
   --fs:16.5px;
+  --k0:#b4232c; --k1:#1f63a8; --k2:#2a7d47; --k3:#7d45b3; --k4:#b05f00; --k5:#0d7b7b; --k6:#b52d70; --k7:#626221;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){
   :root{
     --bg:#12141f; --surface:#1a1d2b; --surface2:#242839; --ink:#e8e9f1; --muted:#9aa0b6; --line:#2d3248;
-    --accent:#d9ae62; --accent-ink:#1a1405; --user:#27314c; --danger:#ee8f87; --ok:#7fcf9b;
+    --accent:#d9ae62; --accent-ink:#1a1405; --k0:#ff8f8f; --k1:#82bcff; --k2:#7fd99b; --k3:#c9a3ff; --k4:#ffb663; --k5:#62d6d6; --k6:#ff90c2; --k7:#cfcf80; --user:#27314c; --danger:#ee8f87; --ok:#7fcf9b;
     --shadow:0 -8px 30px rgba(0,0,0,.5);
     color-scheme:dark;
   }
@@ -152,6 +153,34 @@ hr{border:0;border-top:1px solid var(--line);margin:8px 0 18px}
 #toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;max-width:min(90vw,420px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:18px;font-size:13px;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s}
 #toast.show{opacity:1}
 #boot{margin:auto;color:var(--muted);font-size:13px}
+.av{background-size:cover;background-position:center}
+.say{color:var(--sc)}
+.scenebar{display:flex;align-items:center;gap:10px;width:100%;border:0;border-bottom:1px solid var(--line);background:var(--surface2);text-align:left;
+  padding:7px max(16px,env(safe-area-inset-right,0px)) 7px max(16px,env(safe-area-inset-left,0px));font-size:12.5px;color:var(--muted)}
+.scenebar .sb-text{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scenebar .sb-text b{color:var(--ink);font-weight:500}
+.sb-people{display:flex;flex:none}
+.sb-people .av{width:26px;height:26px;font-size:12px;font-weight:700;margin-left:-6px;border:2px solid var(--surface2);background-color:var(--surface)}
+.sb-people .av:first-child{margin-left:0}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:700}
+details.card{padding:0;gap:0}
+details.card > summary{list-style:none;display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer}
+details.card > summary::-webkit-details-marker{display:none}
+details.card > summary .ctext{flex:1}
+details.card[open] > summary{border-bottom:1px solid var(--line)}
+details.card .card-body{display:grid;gap:8px;padding:12px}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatches button{width:26px;height:26px;border-radius:50%;border:2px solid transparent;background:var(--sw)}
+.swatches button[aria-pressed="true"]{border-color:var(--ink)}
+.askbox{display:grid;gap:8px;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.askbox .seg button{padding:5px 11px;font-size:12px}
+.photo-btn{width:56px;height:56px;border-radius:50%;border:1px dashed var(--line);font-size:11px;color:var(--muted);flex:none}
+.photo-btn.av{border-style:solid;width:56px;height:56px;font-size:18px}
+.split-item{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+.split-item input{width:20px;height:20px;margin-top:2px;accent-color:var(--accent);flex:none}
+.split-item small{display:block;color:var(--muted);font-size:12px;margin-top:2px;white-space:pre-wrap}
 #lock{position:fixed;inset:0;z-index:50;background:var(--bg);display:grid;place-items:center;
   padding:calc(24px + env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(24px,env(safe-area-inset-left,0px))}
 .lock-in{width:100%;max-width:340px;display:grid;justify-items:center;gap:12px;text-align:center}
@@ -191,6 +220,7 @@ hr{border:0;border-top:1px solid var(--line);margin:8px 0 18px}
     </button>
   </header>
 
+  <button class="scenebar" id="sceneBar" hidden aria-label="현재 장면 고치기"><span class="sb-text" id="sbText"></span><span class="sb-people" id="sbPeople"></span></button>
   <div class="bar" id="notice" hidden><span>API 키를 넣으면 대화를 시작할 수 있어요.</span><button id="noticeBtn">설정 열기</button></div>
   <div class="bar" id="err" hidden><span id="errText"></span><button class="retry" id="errRetry" hidden>다시 시도</button><button id="errClose" aria-label="닫기">×</button></div>
   <div class="bar" id="bkBar" hidden><span id="bkBarText"></span><button id="bkBarBtn">백업 저장</button></div>
@@ -203,6 +233,7 @@ hr{border:0;border-top:1px solid var(--line);margin:8px 0 18px}
   <div class="chips">
     <button class="chip" id="cContinue">계속</button>
     <button class="chip" id="cAct">*행동*</button>
+    <button class="chip" id="cStyle">형식</button>
     <button class="chip" id="cNote">유저 노트</button>
     <button class="chip" id="cUndo">마지막 턴 취소</button>
     <button class="chip" id="cSum">지금 요약</button>
@@ -217,6 +248,7 @@ hr{border:0;border-top:1px solid var(--line);margin:8px 0 18px}
     <button id="mNew">새 대화 시작</button>
     <button id="mEdit">캐릭터 편집</button>
     <button id="mPc">PC 목록</button>
+    <button id="mSecret">비밀·떡밥</button>
     <button id="mTxt">대화를 텍스트 파일로 저장</button>
     <button id="mCopy">대화 전체 복사</button>
     <button id="mSet">설정</button>
@@ -300,6 +332,70 @@ hr{border:0;border-top:1px solid var(--line);margin:8px 0 18px}
   </div>
 </section>
 
+<!-- 장면 -->
+<section class="sheet" id="shScene" aria-label="현재 장면">
+  <div class="back" data-close="shScene"></div>
+  <div class="panel">
+    <div class="panel-head"><h2>현재 장면</h2><button class="btn primary" id="scSave" type="button">저장</button></div>
+    <div class="panel-body">
+      <div class="hint" style="margin-bottom:12px">답변마다 자동으로 기록돼요. 틀렸으면 여기서 고치면 다음 답변부터 반영돼요.</div>
+      <div class="split">
+        <div class="field"><label class="lbl" for="scTime">시간</label><input class="in" id="scTime" placeholder="예: 평일 아침 7시 반"></div>
+        <div class="field"><label class="lbl" for="scPlace">장소</label><input class="in" id="scPlace" placeholder="예: 아사이 가 부엌"></div>
+      </div>
+      <div class="field">
+        <span class="lbl">장면에 있는 인물</span>
+        <div class="seg" id="scPeople"></div>
+        <input class="in" id="scOthers" placeholder="그 밖의 인물 (쉼표로 구분)">
+      </div>
+      <label class="check"><input type="checkbox" id="scTrack"> 답변마다 장면 자동 기록</label>
+    </div>
+  </div>
+</section>
+
+<!-- 답변 형식 -->
+<section class="sheet" id="shStyle" aria-label="답변 형식">
+  <div class="back" data-close="shStyle"></div>
+  <div class="panel">
+    <div class="panel-head"><h2>답변 형식</h2><button class="btn" data-close="shStyle">닫기</button></div>
+    <div class="panel-body">
+      <div class="field"><span class="lbl">길이</span><div class="seg" id="stLen">
+        <button type="button" data-v="auto">자동</button><button type="button" data-v="short">짧게</button><button type="button" data-v="normal">보통</button><button type="button" data-v="long">길게</button>
+      </div></div>
+      <div class="field"><span class="lbl">문체</span><div class="seg" id="stMode">
+        <button type="button" data-v="auto">자동</button><button type="button" data-v="dialogue">대사 위주</button><button type="button" data-v="balance">균형</button><button type="button" data-v="narration">묘사 위주</button>
+      </div></div>
+      <div class="hint">이 대화에만 적용돼요. '자동'은 캐릭터 설정의 규칙을 따라요.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 비밀·떡밥 -->
+<section class="sheet" id="shSecret" aria-label="비밀과 떡밥">
+  <div class="back" data-close="shSecret"></div>
+  <div class="panel">
+    <div class="panel-head"><h2>비밀·떡밥</h2><div class="btns"><button class="btn" id="secFind" type="button">설정에서 찾기</button><button class="btn primary" id="secAdd" type="button">+ 추가</button></div></div>
+    <div class="panel-body">
+      <div class="hint" style="margin-bottom:12px">숨겨진 사실과 누가 알고 있는지를 기록해요. 매 답변에 함께 보내서 비밀이 엉뚱하게 새지 않게 하고, 자동 요약 때 상태가 갱신돼요. '공통'은 이 캐릭터의 모든 대화에, '이 대화'는 지금 대화에만 있는 항목이에요.</div>
+      <div id="secFound"></div>
+      <div id="secList"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 인물 나누기 미리보기 -->
+<section class="sheet" id="shSplit" aria-label="인물 카드로 나누기">
+  <div class="back" data-close="shSplit"></div>
+  <div class="panel">
+    <div class="panel-head"><h2>인물 카드로 나누기</h2><button class="btn" data-close="shSplit">닫기</button></div>
+    <div class="panel-body">
+      <div class="hint" style="margin-bottom:12px">설정 글에서 [이름]으로 시작하는 인물 부분을 찾았어요. 고른 인물은 그 부분을 글자 그대로 카드로 옮기고, 설정 글에서는 빼요. 내용은 바꾸지 않아요. 나눈 뒤에도 '나누기 전으로 되돌리기'로 원래대로 돌릴 수 있어요.</div>
+      <div id="splitList"></div>
+      <div class="btns" style="margin-top:8px"><button class="btn primary" id="splitApply" type="button">고른 인물을 카드로 나누기</button></div>
+    </div>
+  </div>
+</section>
+
 <!-- PC 목록 -->
 <section class="sheet" id="shPc" aria-label="PC 목록">
   <div class="back" data-close="shPc"></div>
@@ -320,7 +416,7 @@ hr{border:0;border-top:1px solid var(--line);margin:8px 0 18px}
     <div class="panel-body">
       <div class="split">
         <div class="field"><label class="lbl" for="edName">이름</label><input class="in" id="edName" maxlength="40"></div>
-        <div class="field"><label class="lbl" for="edAv">아이콘 (글자 1~2개)</label><input class="in" id="edAv" maxlength="4"></div>
+        <div class="field"><label class="lbl" for="edAv">아이콘 (글자 1~2개)</label><div class="row"><input class="in" id="edAv" maxlength="4"><button class="photo-btn" id="edImg" type="button" aria-label="캐릭터 사진">사진</button></div><button class="btn sm" id="edImgDel" type="button" hidden>사진 지우기</button></div>
       </div>
       <div class="field">
         <label class="lbl" for="edPrompt">캐릭터·세계관 설정</label>
@@ -338,6 +434,16 @@ hr{border:0;border-top:1px solid var(--line);margin:8px 0 18px}
         <label class="lbl" for="edPc">이 캐릭터의 기본 PC</label>
         <div class="row"><select class="in" id="edPc"></select><button class="btn" type="button" id="edPcList">PC 목록</button></div>
         <div class="hint">새 대화는 이 PC로 시작해요. 대화마다 유저 노트에서 바꿀 수 있어요.</div>
+      </div>
+
+      <hr>
+      <div class="sec">등장인물 카드</div>
+      <div class="hint" style="margin-bottom:10px">인물마다 카드를 두면, 장면에 있거나 최근 대화에 이름이 나온 인물만 자세히 보내고 나머지는 한 줄 소개만 보내요. 대사 색과 사진도 카드에서 정해요.</div>
+      <div id="castList"></div>
+      <div class="btns" style="margin-bottom:22px">
+        <button class="btn" id="castAdd" type="button">+ 인물 추가</button>
+        <button class="btn" id="castSplit" type="button">설정 글에서 인물 나누기</button>
+        <button class="btn danger" id="castRevert" type="button">나누기 전으로 되돌리기</button>
       </div>
 
       <hr>
@@ -463,6 +569,7 @@ hr{border:0;border-top:1px solid var(--line);margin:8px 0 18px}
         <input id="fFont" type="range" min="13" max="22" step="0.5">
       </div>
       <label class="check" style="margin-bottom:16px"><input type="checkbox" id="fEnter"> Enter로 보내기 (끄면 Enter는 줄바꿈)</label>
+      <label class="check" style="margin-bottom:16px"><input type="checkbox" id="fScene"> 답변마다 장면(시간·장소·인물) 자동 기록</label>
 
       <hr>
       <div class="sec">PC</div>
@@ -496,6 +603,7 @@ hr{border:0;border-top:1px solid var(--line);margin:8px 0 18px}
       </div>
       <input type="file" id="bkFile" accept="application/json,.json" hidden>
       <input type="file" id="packFile" accept="application/json,.json" hidden>
+      <input type="file" id="imgFile" accept="image/*" hidden>
       <div class="hint" id="storeInfo" style="margin-top:10px"></div>
     </div>
   </div>
@@ -727,7 +835,7 @@ function costOf(m, u){
   return ((u.input_tokens||0)*pi + (u.output_tokens||0)*po + (u.cache_creation_input_tokens||0)*pw + (u.cache_read_input_tokens||0)*pr) / 1e6;
 }
 const DEF = {provider:'gemini', keys:{}, models:{}, sumModel:'', customBase:'', temp:1, maxTokens:8192,
-  safety:'BLOCK_NONE', thinking:'low', claudeEffort:'medium', relockMin:5, lastBackup:0, usage:{usd:0, calls:0, since:0}, userName:'나', userDesc:'', defaultPc:'',
+  sceneTrack:true, safety:'BLOCK_NONE', thinking:'low', claudeEffort:'medium', relockMin:5, lastBackup:0, usage:{usd:0, calls:0, since:0}, userName:'나', userDesc:'', defaultPc:'',
   interval:30, maxRecent:80, overlap:6, compactChars:6000, autoBackup:false,
   font:16.5, enterSend:false};
 
@@ -796,6 +904,10 @@ function normalize(st){
     prompt:String(c.prompt || ''), greeting:String(c.greeting || ''),
     pcName:String(c.pcName || ''), persona:String(c.persona || ''), pcId:String(c.pcId || ''), note:String(c.note || ''),
     lore:Array.isArray(c.lore) ? c.lore.map(l => ({id:l.id || uid(), keys:String(l.keys || ''), text:String(l.text || ''), always:!!l.always, pin:!!l.pin})) : [],
+    cast:Array.isArray(c.cast) ? c.cast.map((k, i) => ({id:String(k.id || uid()), name:String(k.name || '이름 없음'), aliases:String(k.aliases || ''), color:Number.isInteger(k.color) ? k.color % 8 : i % 8,
+      img:String(k.img || ''), short:String(k.short || ''), detail:String(k.detail || ''), always:!!k.always, fromSplit:!!k.fromSplit})) : [],
+    secrets:Array.isArray(c.secrets) ? c.secrets.map(x => ({id:String(x.id || uid()), title:String(x.title || ''), detail:String(x.detail || ''), knownBy0:String(x.knownBy0 || '')})) : [],
+    img:String(c.img || ''), promptBackup:String(c.promptBackup || ''),
     session:c.session || null
   }));
   if(!st.sessions || typeof st.sessions !== 'object') st.sessions = {};
@@ -809,9 +921,13 @@ function normalize(st){
     if(!Array.isArray(s.mem.chunks)) s.mem.chunks = [];
     s.title = s.title || '대화'; s.created = s.created || Date.now(); s.updated = s.updated || s.created; s.draft = s.draft || '';
     s.pcId = String(s.pcId || '');
+    s.scene = s.scene && typeof s.scene === 'object' ? s.scene : null;
+    s.secretState = s.secretState && typeof s.secretState === 'object' ? s.secretState : {};
+    s.extraSecrets = Array.isArray(s.extraSecrets) ? s.extraSecrets : [];
+    s.style = Object.assign({len:'auto', mode:'auto'}, s.style || {});
   }
   if(!Array.isArray(st.pcs)) st.pcs = [];
-  st.pcs = st.pcs.map(p => ({id:String(p.id || uid()), name:String(p.name || '이름 없음'), avatar:String(p.avatar || ''), desc:String(p.desc || '')}));
+  st.pcs = st.pcs.map(p => ({id:String(p.id || uid()), name:String(p.name || '이름 없음'), avatar:String(p.avatar || ''), desc:String(p.desc || ''), img:String(p.img || '')}));
   if(!st.pcMigrated){
     const ss = st.settings;
     if((ss.userName && ss.userName !== '나') || (ss.userDesc || '').trim()){
@@ -873,7 +989,8 @@ const charSessions = cid => Object.values(state.sessions).filter(s => s.charId =
 function newSession(c, title){
   const sid = uid();
   const n = charSessions(c.id).length + 1;
-  const s = {id:sid, charId:c.id, title: title || ('대화 ' + n), created:Date.now(), updated:Date.now(), msgs:[], mem:newMem(), draft:''};
+  const s = {id:sid, charId:c.id, title: title || ('대화 ' + n), created:Date.now(), updated:Date.now(), msgs:[], mem:newMem(), draft:'',
+    pcId:'', scene:null, secretState:{}, extraSecrets:[], style:{len:'auto', mode:'auto'}};
   if(c.greeting && c.greeting.trim()) s.msgs.push({id:uid(), role:'assistant', text:expand(c.greeting, c)});
   state.sessions[sid] = s; c.session = sid;
   return s;
@@ -882,6 +999,9 @@ function cur(){
   const c = activeChar();
   let s = c.session && state.sessions[c.session];
   if(!s){ s = charSessions(c.id)[0] || newSession(c); c.session = s.id; }
+  if(!s.style) s.style = {len:'auto', mode:'auto'};
+  if(!s.secretState) s.secretState = {};
+  if(!s.extraSecrets) s.extraSecrets = [];
   return s;
 }
 function touch(s){ s.updated = Date.now(); persist(); }
@@ -904,7 +1024,8 @@ function applyFont(){ document.documentElement.style.setProperty('--fs', S.font 
 
 function renderHeader(){
   const c = activeChar(), s = cur();
-  $('#hAv').textContent = avatarOf(c);
+  const hav = $('#hAv'); hav.textContent = c.img ? '' : avatarOf(c); hav.style.backgroundImage = c.img ? 'url(' + c.img + ')' : '';
+  renderSceneBar(); updateStyleChip();
   $('#hName').textContent = c.name + (charSessions(c.id).length > 1 ? ' · ' + s.title : '');
   const sub = $('#hSub');
   if(summarizing.has(s.id)){ sub.textContent = '기억 정리 중…'; sub.classList.add('working'); }
@@ -925,12 +1046,12 @@ function msgNode(m, i, msgs, s){
   }
   const b = document.createElement('div');
   b.className = 'body' + (m.id === streamingId ? ' streaming' : '');
-  b.innerHTML = fmt(m.text); d.appendChild(b);
+  b.innerHTML = m.role === 'user' ? fmt(m.text) : fmtAI(m.text, speakersFor(charOf(s))); d.appendChild(b);
   if(m.role !== 'user' && i === msgs.length - 1 && !busy){
     const sw = document.createElement('div'); sw.className = 'swipe';
     const n = m.alts ? m.alts.length : 1, k = m.alts ? (m.ai || 0) + 1 : 1;
     sw.innerHTML = (n > 1 ? '<button data-act="prev" aria-label="이전 답변"' + (k <= 1 ? ' disabled' : '') + '>‹</button><span class="n">' + k + '/' + n + '</span><button data-act="next" aria-label="다음 답변"' + (k >= n ? ' disabled' : '') + '>›</button>' : '')
-      + '<button data-act="reroll">다시 생성</button>';
+      + '<button data-act="reroll">다시 생성</button><button data-act="askre">요청하고 다시</button>';
     d.appendChild(sw);
   }
   const t = document.createElement('div'); t.className = 'tools';
@@ -980,13 +1101,123 @@ function paint(am){
     if(!n) return;
     const log = $('#log');
     const stick = log.scrollHeight - log.scrollTop - log.clientHeight < 140;
-    n.innerHTML = fmt(am.text);
+    n.innerHTML = fmtAI(am.text, speakersFor(activeChar()));
     if(stick) log.scrollTop = log.scrollHeight;
   });
 }
 let errRetryFn = null;
 function showErr(msg, retry){ $('#errText').textContent = msg; $('#err').hidden = false; errRetryFn = retry || null; $('#errRetry').hidden = !retry; }
 function hideErr(){ $('#err').hidden = true; errRetryFn = null; }
+
+/* ================= 등장인물 · 장면 · 비밀 ================= */
+function aliasesOf(k){
+  const a = [k.name.trim()];
+  const parts = k.name.trim().split(/\s+/); if(parts.length > 1) a.push(parts[parts.length - 1]);
+  k.aliases.split(/[,，]/).map(x => x.trim()).filter(Boolean).forEach(x => a.push(x));
+  return [...new Set(a.filter(x => x.length >= 1))];
+}
+function castFind(c, name){
+  name = String(name || '').trim(); if(!name) return null;
+  return c.cast.find(k => aliasesOf(k).some(a => a === name || name.includes(a) || a.includes(name))) || null;
+}
+const SCENE_RE = /\[\[\s*장면\s*[:：]([^\]]*)\]\]/;
+function splitScene(text){
+  text = String(text || '');
+  const m = SCENE_RE.exec(text);
+  if(!m) return {text:text.replace(/\[\[[^\]]*$/, '').trimEnd(), scene:null};
+  const p = m[1].split('|').map(x => x.trim());
+  const scene = {time:p[0] || '', place:p[1] || '', people:(p[2] || '').split(/[,，、]/).map(x => x.trim()).filter(Boolean)};
+  return {text:(text.slice(0, m.index) + text.slice(m.index + m[0].length)).replace(/`+\s*$/, '').trim(), scene};
+}
+const displayText = t => String(t || '').replace(/\[\[[\s\S]*$/, '').replace(/\[$/, '');
+function currentScene(s){
+  for(let i = s.msgs.length - 1; i >= 0; i--){ const m = s.msgs[i]; if(m.role === 'assistant' && m.scene) return m.scene; }
+  return s.scene;
+}
+function setScene(s, sc){
+  for(let i = s.msgs.length - 1; i >= 0; i--){ const m = s.msgs[i]; if(m.role === 'assistant'){ m.scene = sc; if(m.altScenes) m.altScenes[m.ai || 0] = sc; return; } }
+  s.scene = sc;
+}
+/* 이번 답변에 자세히 보낼 인물: 장면에 있거나, 최근 대화에 이름이 나왔거나, '항상 자세히' */
+function activeCast(c, s, prior, extra){
+  if(!c.cast.length) return {on:[], off:[]};
+  const sc = currentScene(s);
+  const hay = prior.slice(-4).map(m => m.text).concat(extra ? [extra] : []).join('\n');
+  if(!sc) return {on:c.cast.slice(), off:[]};
+  const on = c.cast.filter(k => k.always || (sc && sc.people.some(p => castFind(c, p) === k)) || aliasesOf(k).some(a => hay.includes(a)));
+  return {on, off:c.cast.filter(k => !on.includes(k))};
+}
+function secretList(c, s){
+  return c.secrets.map(x => Object.assign({scope:'char'}, x)).concat(s.extraSecrets.map(x => Object.assign({scope:'sess'}, x)))
+    .map(x => Object.assign(x, {st: Object.assign({status:'hidden', knownBy:x.knownBy0 || ''}, s.secretState[x.id] || {})}));
+}
+const SECRET_LABEL = {hidden:'숨김', hint:'단서가 나옴', revealed:'드러남'};
+
+/* 대사 색: 따옴표 앞에 나온 인물 이름(주어 조사 우선)으로 말한 사람을 판단 */
+function speakersFor(c){ return c.cast.map(k => ({names:aliasesOf(k), color:k.color})); }
+function findSpeaker(text, sp){
+  let best = null, bestPos = -1, bestSubj = false;
+  for(const x of sp){
+    for(const n of x.names){
+      let i = text.lastIndexOf(n);
+      while(i >= 0){
+        const subj = /^(이|가|은|는|께서|도)/.test(text.slice(i + n.length, i + n.length + 2));
+        if((subj && (!bestSubj || i > bestPos)) || (!bestSubj && !subj && i > bestPos)){ best = x; bestPos = i; bestSubj = subj; }
+        if(subj || i === 0) break;
+        i = text.lastIndexOf(n, i - 1);
+      }
+    }
+  }
+  return best;
+}
+function fmtInline(t){ return esc(t).replace(/\*\*([^*\n][\s\S]*?)\*\*/g, '<strong>$1</strong>').replace(/\*([^*\n]+?)\*/g, '<em>$1</em>'); }
+function fmtAI(t, sp){
+  t = displayText(t);
+  if(!sp || !sp.length) return fmt(t);
+  let speaker = null;
+  return t.split('\n').map(line => {
+    const re = /"[^"\n]+"|“[^”\n]+”|「[^」\n]+」|『[^』\n]+』/g;
+    let out = '', last = 0, mm;
+    const quotes = [...line.matchAll(re)];
+    re.lastIndex = 0;
+    let qi = 0;
+    while((mm = re.exec(line))){
+      const before = line.slice(last, mm.index);
+      let f = findSpeaker(before, sp);
+      if(!f && !before.replace(/[*\s]/g, '')){
+        const nx = quotes[qi + 1], after = line.slice(mm.index + mm[0].length, nx ? nx.index : line.length);
+        f = findSpeaker(after, sp);
+      }
+      qi++;
+      if(f) speaker = f;
+      out += fmtInline(before);
+      out += speaker ? '<span class="say" style="--sc:var(--k' + speaker.color + ')">' + fmtInline(mm[0]) + '</span>' : fmtInline(mm[0]);
+      last = mm.index + mm[0].length;
+    }
+    const tail = line.slice(last);
+    const f2 = findSpeaker(tail, sp); if(f2) speaker = f2;
+    return out + fmtInline(tail);
+  }).join('\n');
+}
+
+/* 사진: 정사각형으로 잘라 256px로 줄여 저장 */
+async function pickImage(){
+  const inp = $('#imgFile');
+  const file = await new Promise(res => { inp.value = ''; inp.onchange = () => res(inp.files[0] || null); inp.click(); });
+  if(!file) return null;
+  try{
+    const bmp = await createImageBitmap(file);
+    const side = Math.min(bmp.width, bmp.height), cv = document.createElement('canvas');
+    cv.width = cv.height = 256;
+    cv.getContext('2d').drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, 256, 256);
+    let url = cv.toDataURL('image/webp', 0.85);
+    if(!url.startsWith('data:image/webp')) url = cv.toDataURL('image/jpeg', 0.85);
+    return url;
+  }catch(e){ toast('이 사진은 열 수 없어요. 다른 사진을 골라 주세요'); return null; }
+}
+function avHTML(img, text, extraCls, color){
+  return '<span class="av' + (extraCls ? ' ' + extraCls : '') + '"' + (img ? ' style="background-image:url(' + img + ')"' : (color !== undefined ? ' style="color:var(--k' + color + ')"' : '')) + '>' + (img ? '' : esc(two(text) || '?')) + '</span>';
+}
 
 /* ================= 보낼 내용 만들기 ================= */
 const START = '(이야기를 시작한다. {{user}}의 설정에 맞춰 첫 장면을 열어 줘.)';
@@ -1008,7 +1239,9 @@ function recentSlice(s, prior){
   if(sl.length > S.maxRecent) sl = sl.slice(-S.maxRecent);
   return sl;
 }
-function buildContext(s, prior, extra){
+const LEN_TXT = {short:'짧게. 1~2문단으로, 장면을 크게 진전시키지 않는다', normal:'보통. 3~4문단', long:'길게. 5문단 이상으로 묘사와 전개를 충분히'};
+const MODE_TXT = {dialogue:'대사 위주. 묘사는 꼭 필요한 만큼만', balance:'대사와 묘사를 고르게', narration:'묘사 위주. 분위기, 행동, 내면 묘사를 풍부하게'};
+function buildContext(s, prior, extra, direction){
   const c = charOf(s);
   let h = recentSlice(s, prior).filter(m => m.text && m.text.trim())
     .map(m => ({role: m.role === 'user' ? 'user' : 'assistant', text: m.text}));
@@ -1019,6 +1252,10 @@ function buildContext(s, prior, extra){
   h = mergeTurns(h);
   const note = (s.mem.note || '').trim();
   if(note){ const last = h[h.length-1]; last.text += '\n\n[진행 메모(OOC), 이번 답변에 반영: ' + expand(note, c) + ']'; }
+  const st = s.style || {};
+  const fm = [st.len && LEN_TXT[st.len] ? '길이 — ' + LEN_TXT[st.len] : '', st.mode && MODE_TXT[st.mode] ? '문체 — ' + MODE_TXT[st.mode] : ''].filter(Boolean);
+  if(fm.length) h[h.length-1].text += '\n\n[이번 답변 형식(OOC): ' + fm.join(' / ') + ']';
+  if(direction && direction.trim()) h[h.length-1].text += '\n\n[다시 쓰기 요청(OOC): ' + direction.trim() + '. 이전 답변을 되풀이하지 말고 이 요청을 반영해 새로 쓴다.]';
   return h;
 }
 function triggeredLore(c, texts){
@@ -1033,6 +1270,14 @@ function systemParts(s, prior, extra){
   const head = (expand(c.prompt, c, s).trim() + '\n\n' + '[' + pn + ' (PC)]\n' + (pd ? expand(pd, c, s) : '이름: ' + pn)
     + (cn ? '\n\n[유저 노트 — 반드시 지킬 것]\n' + expand(cn, c, s) : '')).replace(/\{\{user\}\}/gi, pn);
   const recentTexts = prior.slice(-6).map(x => x.text).concat(extra ? [extra] : []);
+  const ac = activeCast(c, s, prior, extra);
+  if(ac.on.length) parts.push('[등장인물 — 자세한 설정]\n' + ac.on.map(k => '## ' + k.name + '\n' + expand(k.detail, c, s).trim()).join('\n\n'));
+  if(ac.off.length) parts.push('[그 밖의 인물 — 지금 장면에 없음. 부르거나 자연스러운 계기가 있을 때만 등장]\n' + ac.off.map(k => '- ' + k.name + (k.short ? ': ' + expand(k.short, c, s) : '')).join('\n'));
+  const sc = currentScene(s);
+  if(sc && (sc.time || sc.place || sc.people.length)) parts.push('[현재 장면]\n' + (sc.time ? '시간: ' + sc.time + '\n' : '') + (sc.place ? '장소: ' + sc.place + '\n' : '') + (sc.people.length ? '장면에 있는 인물: ' + sc.people.join(', ') : ''));
+  const secs = secretList(c, s);
+  if(secs.length) parts.push('[비밀과 떡밥 — 상태를 지켜라]\n숨김 상태인 비밀은 이야기 속에서 자연스러운 계기 없이 드러내지 않는다. 아는 사람으로 적힌 인물만 그 사실을 안다.\n'
+    + secs.map(x => '- ' + x.title + (x.detail ? ': ' + x.detail : '') + ' (상태: ' + SECRET_LABEL[x.st.status] + ' · 아는 사람: ' + (x.st.knownBy || '없음') + ')').join('\n'));
   const lore = triggeredLore(c, recentTexts).filter(l => !l.pin);
   if(lore.length) parts.push('[관련 설정]\n' + lore.map(l => '- ' + (l.keys ? l.keys.split(/[,，]/)[0].trim() + ': ' : '') + expand(l.text, c, s)).join('\n'));
   if(m.chunks.length || (m.state && m.state.trim()) || (m.pinned && m.pinned.trim())){
@@ -1043,6 +1288,7 @@ function systemParts(s, prior, extra){
   if(m.pinned && m.pinned.trim()) parts.push('[유저 노트 · 이 대화 — 반드시 지킬 것]\n' + expand(m.pinned, c, s).trim());
   const pins = c.lore.filter(l => l.pin && l.text.trim());
   if(pins.length) parts.push(pins.map(l => '[' + (l.keys.split(/[,，]/)[0].trim() || '규칙') + ' — 반드시 지킬 것]\n' + expand(l.text, c, s).trim()).join('\n\n'));
+  if(S.sceneTrack) parts.push('[장면 기록 — 출력 형식]\n답변을 다 쓴 뒤 맨 마지막 줄에 아래 형식으로 장면 정보를 한 줄 붙인다. 이 줄은 화면에 보이지 않고 기록에만 쓰인다.\n[[장면: 날짜·시간대 | 장소 | 이 답변이 끝난 시점에 장면에 있는 인물(' + pn + ' 포함, 쉼표로 구분)]]');
   return {head, rest: parts.filter(Boolean).join('\n\n').replace(/\{\{user\}\}/gi, pn)};
 }
 
@@ -1220,11 +1466,12 @@ async function generate(opt){
   const target = opt.target || null;
   const upto = target ? msgs.indexOf(target) : msgs.length;
   const prior = msgs.slice(0, upto);
-  const hist = buildContext(s, prior, opt.extra);
+  const hist = buildContext(s, prior, opt.extra, opt.direction);
   const sysParts = systemParts(s, prior, opt.extra);
   const sys = systemText(s, prior, opt.extra);
   let am, prevText = '';
-  if(target){ am = target; prevText = am.text; if(!am.alts){ am.alts = [am.text]; am.ai = 0; } am.text = ''; }
+  let prevScene = null;
+  if(target){ am = target; prevText = am.text; prevScene = am.scene || null; if(!am.alts){ am.alts = [am.text]; am.ai = 0; } if(!am.altScenes) am.altScenes = am.alts.map((x, j) => j === (am.ai || 0) ? prevScene : null); am.text = ''; }
   else { am = {id:uid(), role:'assistant', text:''}; msgs.push(am); }
   streamingId = am.id; busy = true; abortCtl = new AbortController();
   renderLog();
@@ -1246,9 +1493,11 @@ async function generate(opt){
   }finally{
     clearInterval(tick);
     busy = false; streamingId = null; abortCtl = null;
+    const sp = splitScene(am.text); am.text = sp.text;
+    if(am.text) am.scene = sp.scene || (target ? prevScene : null) || null;
     if(target){
-      if(am.text){ am.alts.push(am.text); am.ai = am.alts.length - 1; }
-      else { am.text = prevText; }
+      if(am.text){ am.alts.push(am.text); am.altScenes.push(am.scene); am.ai = am.alts.length - 1; }
+      else { am.text = prevText; am.scene = prevScene; }
     } else if(!am.text){
       const i = msgs.indexOf(am); if(i >= 0) msgs.splice(i, 1);
     }
@@ -1295,12 +1544,25 @@ const REC_SYS = '너는 장편 롤플레이의 기록 담당자다. 대화에 �
 function transcript(c, list, s){
   return list.filter(m => m.text && m.text.trim()).map(m => (m.role === 'user' ? pcName(c, s) + '(PC)' : c.name) + ': ' + m.text.trim()).join('\n\n');
 }
+function parseSecretLines(t){
+  const upd = [], add = [];
+  String(t || '').split('\n').map(l => l.replace(/^\s*[-*]\s*/, '').replace(/`/g, '').trim()).filter(Boolean).forEach(l => {
+    const p = l.split('|').map(x => x.trim());
+    const st = v => /드러/.test(v) ? 'revealed' : /단서/.test(v) ? 'hint' : /숨/.test(v) ? 'hidden' : null;
+    if(/^S\d+$/i.test(p[0]) && p.length >= 2){ upd.push({n:+p[0].slice(1), status:st(p[1]), knownBy:p[2] !== undefined ? p[2].replace(/^아는 사람\s*[:：]?\s*/, '') : null}); }
+    else if(/^새/.test(p[0]) && p.length >= 3){ add.push({title:p[1], detail:p[2], status:st(p[3] || '') || 'hidden', knownBy:(p[4] || '').replace(/^아는 사람\s*[:：]?\s*/, '')}); }
+  });
+  return {upd, add};
+}
 function parseSummary(t){
   t = String(t || '').trim();
+  const sp = t.split(/^\s*#{1,4}\s*비밀[^\n]*$/m);
+  t = sp[0].trim();
+  const secrets = parseSecretLines(sp[1] || '');
   const parts = t.split(/^\s*#{1,4}\s*현재\s*상[황태][^\n]*$/m);
   const ev = (parts[0] || '').replace(/^\s*#{1,4}\s*사건[^\n]*$/m, '').trim();
   const st = (parts[1] || '').trim();
-  return {ev: ev || t, st};
+  return {ev: ev || t, st, secrets};
 }
 function maybeSummarize(s){
   if(pendingTurns(s) >= S.interval && !summarizing.has(s.id)) summarize(s, false);
@@ -1324,7 +1586,9 @@ async function summarize(s, manual){
   if(manual) toast('요약하는 중이에요. 대화는 계속해도 돼요');
   const t0 = turnCount(msgs, from - 1) + 1, t1 = turnCount(msgs, end);
   const lastChunk = s.mem.chunks[s.mem.chunks.length - 1];
-  const prompt =
+  const secs = secretList(c, s);
+  const secBlock = secs.length ? '[비밀 목록]\n' + secs.map((x, i) => 'S' + (i + 1) + '. ' + x.title + (x.detail ? ': ' + x.detail : '') + ' (현재: ' + SECRET_LABEL[x.st.status] + ', 아는 사람: ' + (x.st.knownBy || '없음') + ')').join('\n') + '\n\n' : '';
+  const prompt = secBlock +
     '[이전 현재 상황 정리]\n' + (s.mem.state.trim() || '(없음)') + '\n\n'
     + '[직전 줄거리 요약]\n' + (lastChunk ? lastChunk.text.trim() : '(없음. 이번이 첫 요약)') + '\n\n'
     + (s.mem.pinned.trim() ? '[유저 노트]\n' + expand(s.mem.pinned, c, s).trim() + '\n\n' : '')
@@ -1339,13 +1603,29 @@ async function summarize(s, manual){
     + '- 드러난 비밀: 무엇이 누구에게 알려졌는지\n'
     + '- 아직 숨겨진 것: 대화에서 아직 드러나지 않은 사실과 흘린 단서\n'
     + '- 진행 중인 일, 약속, 해결되지 않은 떡밥\n'
-    + '(이전 현재 상황 정리를 바탕으로 바뀐 부분을 반영해 전체를 다시 작성해. 드러난 비밀, 약속, 떡밥처럼 변하지 않은 중요한 사실은 지우지 마.)';
+    + '(이전 현재 상황 정리를 바탕으로 바뀐 부분을 반영해 전체를 다시 작성해. 드러난 비밀, 약속, 떡밥처럼 변하지 않은 중요한 사실은 지우지 마.)\n\n'
+    + '### 비밀\n'
+    + (secs.length ? '- 비밀 목록 중 이번 기록에서 상태나 아는 사람이 바뀐 항목만, 한 줄에 하나씩: S번호 | 숨김 또는 단서 또는 드러남 | 아는 사람(쉼표로 구분, 없으면 없음)\n' : '')
+    + '- 이번 기록에서 새로 생긴 비밀이나 떡밥이 있으면 한 줄에 하나씩: 새 | 제목 | 내용 | 숨김 또는 단서 또는 드러남 | 아는 사람\n'
+    + '- 해당하는 것이 없으면 \'없음\'이라고만 쓴다.';
   try{
     const out = await complete(REC_SYS, [{role:'user', text:prompt}], {model: S.sumModel || model(), temp:0.3, maxTokens: 8192, thinking: S.thinking === 'minimal' ? 'minimal' : 'low', effort:'low', session:s});
     if(!out.trim()) throw new Error('요약 결과가 비어 있어요');
     const p = parseSummary(out);
     s.mem.chunks.push({id:uid(), t0, t1, text:p.ev, at:Date.now()});
     if(p.st) s.mem.state = p.st;
+    p.secrets.upd.forEach(u => {
+      const x = secs[u.n - 1]; if(!x) return;
+      const cur0 = Object.assign({status:'hidden', knownBy:x.knownBy0 || ''}, s.secretState[x.id] || {});
+      if(u.status) cur0.status = u.status;
+      if(u.knownBy !== null && u.knownBy !== undefined) cur0.knownBy = /^없음$/.test(u.knownBy) ? '' : u.knownBy;
+      s.secretState[x.id] = cur0;
+    });
+    p.secrets.add.forEach(a => {
+      if(!a.title || secretList(c, s).some(x => x.title === a.title)) return;
+      const id = uid(); s.extraSecrets.push({id, title:a.title, detail:a.detail, knownBy0:''});
+      s.secretState[id] = {status:a.status, knownBy:/^없음$/.test(a.knownBy) ? '' : a.knownBy};
+    });
     s.mem.upto = msgs[end].id;
     touch(s); persist(true);
     await compact(s);
@@ -1431,17 +1711,34 @@ $('#log').addEventListener('click', e => {
   const btn = e.target.closest('[data-act]');
   const m = s.msgs.find(x => x.id === msgEl.dataset.id); if(!m) return;
   if(!btn){
-    if(e.target.closest('.editbox')) return;
+    if(e.target.closest('.editbox') || e.target.closest('.askbox')) return;
     if(window.getSelection && String(window.getSelection()).length) return;
     msgEl.classList.toggle('open'); return;
   }
   const act = btn.dataset.act;
   if(act === 'copy') copyText(m.text);
   else if(act === 'reroll') reroll();
+  else if(act === 'askre'){
+    const old = msgEl.querySelector('.askbox'); if(old){ old.remove(); return; }
+    const box = document.createElement('div'); box.className = 'askbox';
+    box.innerHTML = '<input class="in" id="askText" placeholder="이번엔 이렇게 써 줘 (예: 히나 시점으로, 더 담담하게)">'
+      + '<div class="seg">' + ['더 짧게','더 길게','대사 더 많이','묘사 더 풍부하게','다른 전개로','감정 더 강하게','분위기 가볍게'].map(t => '<button type="button" data-act="asktag">' + t + '</button>').join('') + '</div>'
+      + '<div class="btns"><button class="btn primary" type="button" data-act="askgo">이 요청으로 다시 생성</button></div>';
+    msgEl.appendChild(box); box.querySelector('input').focus();
+  }
+  else if(act === 'asktag'){
+    const inp = msgEl.querySelector('#askText'); const v = inp.value.trim();
+    inp.value = v ? v + ', ' + btn.textContent : btn.textContent; inp.focus();
+  }
+  else if(act === 'askgo'){
+    if(busy || !ready()) return;
+    const dir = msgEl.querySelector('#askText').value.trim();
+    generate({target:m, direction:dir});
+  }
   else if(act === 'prev' || act === 'next'){
     if(busy || !m.alts) return;
     m.ai = clamp((m.ai || 0) + (act === 'next' ? 1 : -1), 0, m.alts.length - 1);
-    m.text = m.alts[m.ai]; touch(s); renderLog();
+    m.text = m.alts[m.ai]; if(m.altScenes) m.scene = m.altScenes[m.ai] || null; touch(s); renderLog(); renderSceneBar();
   }
   else if(act === 'del'){
     if(busy) return;
@@ -1482,7 +1779,9 @@ $('#log').addEventListener('click', e => {
 function branchFrom(s, m){
   const c = charOf(s), i = s.msgs.indexOf(m);
   const ns = {id:uid(), charId:c.id, pcId:s.pcId || '', title: s.title + ' 분기', created:Date.now(), updated:Date.now(),
-    msgs: JSON.parse(JSON.stringify(s.msgs.slice(0, i + 1))), mem: JSON.parse(JSON.stringify(s.mem)), draft:''};
+    msgs: JSON.parse(JSON.stringify(s.msgs.slice(0, i + 1))), mem: JSON.parse(JSON.stringify(s.mem)), draft:'',
+    scene: s.scene ? JSON.parse(JSON.stringify(s.scene)) : null, secretState: JSON.parse(JSON.stringify(s.secretState || {})),
+    extraSecrets: JSON.parse(JSON.stringify(s.extraSecrets || [])), style: Object.assign({}, s.style)};
   const ui = uptoIdx(s);
   if(ui > i){
     const keepTurns = turnCount(s.msgs, i);
@@ -1511,7 +1810,11 @@ function openSheet(id){
   if(id === 'shSess') renderSessions();
   if(id === 'shMem') fillMem();
   if(id === 'shNote') fillNote();
+  if(id === 'shScene') fillScene();
+  if(id === 'shStyle') fillStyle();
+  if(id === 'shSecret'){ $('#secFound').textContent = ''; renderSecrets(); }
   if(id === 'shPc') renderPcs();
+  el.style.zIndex = String(20 + stack.length);
   el.classList.add('open'); stack.push(id);
   el.querySelector('.panel-body').scrollTop = 0;
   try{ history.pushState({sheet:id}, ''); }catch(e){}
@@ -1525,7 +1828,7 @@ function closeSheet(id){
 function popTop(){
   const id = stack.pop(); if(!id) return;
   document.getElementById(id).classList.remove('open');
-  if(id === 'shSet' || id === 'shMem' || id === 'shNote' || id === 'shPc'){ renderHeader(); if(id !== 'shMem') renderLog(true); }
+  if(['shSet','shMem','shNote','shPc','shScene','shStyle','shSecret'].includes(id)){ renderHeader(); if(id !== 'shMem') renderLog(true); }
   if(id === 'shPc'){ if(stack.includes('shEdit')) fillEdPc(); if(stack.includes('shNote')) fillNote(); if(stack.includes('shSet')) fillDefPc(); }
 }
 window.addEventListener('popstate', () => { if(stack.length) popTop(); });
@@ -1558,7 +1861,91 @@ $('#btnChars').onclick = () => openSheet('shChars');
 $('#newChar').onclick = () => openEditor(null);
 
 /* ================= 캐릭터 편집 ================= */
-let editId = null, edLore = [], edPcVal = '';
+let editId = null, edLore = [], edPcVal = '', edCast = [], edPromptBackup = '', edImgVal = '';
+function renderEdImg(){
+  const b = $('#edImg'); b.className = edImgVal ? 'photo-btn av' : 'photo-btn'; b.style.backgroundImage = edImgVal ? 'url(' + edImgVal + ')' : ''; b.textContent = edImgVal ? '' : '사진';
+  $('#edImgDel').hidden = !edImgVal;
+}
+$('#edImg').onclick = async () => { const u = await pickImage(); if(u){ edImgVal = u; renderEdImg(); } };
+$('#edImgDel').onclick = () => { edImgVal = ''; renderEdImg(); };
+function renderCast(){
+  const box = $('#castList'); box.textContent = '';
+  if(!edCast.length) box.innerHTML = '<div class="hint" style="margin-bottom:10px">인물 카드가 없어요. 설정 글에 [이름] 형식으로 인물이 적혀 있으면 \'설정 글에서 인물 나누기\'로 한 번에 만들 수 있어요.</div>';
+  edCast.forEach(k => {
+    const d = document.createElement('details'); d.className = 'card'; d.dataset.kid = k.id;
+    d.innerHTML = '<summary>' + avHTML(k.img, aliasesOf(k).pop(), '', k.color) + '<span class="ctext"><b style="color:var(--k' + k.color + ')">' + esc(k.name) + '</b><small>' + esc(k.short || '한 줄 소개 없음') + '</small></span></summary>'
+      + '<div class="card-body">'
+      + '<div class="row"><button class="' + (k.img ? 'photo-btn av' : 'photo-btn') + '" type="button" data-cf="img"' + (k.img ? ' style="background-image:url(' + k.img + ')"' : '') + '>' + (k.img ? '' : '사진') + '</button>'
+      + '<div style="flex:1;display:grid;gap:8px;min-width:0"><input class="in" data-cf="name" placeholder="이름" value="' + esc(k.name) + '">'
+      + '<input class="in" data-cf="aliases" placeholder="부르는 이름 (쉼표로 구분)" value="' + esc(k.aliases) + '"></div></div>'
+      + '<div class="swatches">' + [0,1,2,3,4,5,6,7].map(n => '<button type="button" data-cf="color" data-v="' + n + '" style="--sw:var(--k' + n + ')" aria-label="대사 색 ' + (n + 1) + '" aria-pressed="' + (k.color === n) + '"></button>').join('') + '</div>'
+      + '<input class="in" data-cf="short" placeholder="한 줄 소개 (장면에 없을 때 보내는 내용)" value="' + esc(k.short) + '">'
+      + '<textarea class="in" data-cf="detail" rows="8" placeholder="자세한 설정">' + esc(k.detail) + '</textarea>'
+      + '<label class="check" style="font-size:13px"><input type="checkbox" data-cf="always"' + (k.always ? ' checked' : '') + '> 항상 자세히 보내기</label>'
+      + '<div class="btns">' + (k.img ? '<button class="btn sm" type="button" data-cf="noimg">사진 지우기</button>' : '') + '<button class="btn sm danger" type="button" data-cf="del">카드 삭제</button></div>'
+      + '</div>';
+    box.appendChild(d);
+  });
+  $('#castRevert').hidden = !edPromptBackup;
+}
+$('#castList').addEventListener('input', e => {
+  const card = e.target.closest('[data-kid]'), f = e.target.dataset.cf; if(!card || !f) return;
+  const k = edCast.find(x => x.id === card.dataset.kid); if(!k) return;
+  if(f === 'always') k.always = e.target.checked; else if(['name','aliases','short','detail'].includes(f)) k[f] = e.target.value;
+  if(f === 'name' || f === 'short'){ const sm = card.querySelector('summary'); sm.querySelector('b').textContent = k.name; sm.querySelector('small').textContent = k.short || '한 줄 소개 없음'; }
+});
+$('#castList').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-cf]'); if(!b) return;
+  const card = b.closest('[data-kid]'), k = edCast.find(x => x.id === card.dataset.kid); if(!k) return;
+  const f = b.dataset.cf;
+  if(f === 'color'){ k.color = +b.dataset.v; renderCastKeepOpen(k.id); }
+  if(f === 'img'){ const u = await pickImage(); if(u){ k.img = u; renderCastKeepOpen(k.id); } }
+  if(f === 'noimg'){ k.img = ''; renderCastKeepOpen(k.id); }
+  if(f === 'del'){ if(!armConfirm(b, '한 번 더', '카드 삭제', 2500)) return; edCast = edCast.filter(x => x !== k); renderCast(); }
+});
+function renderCastKeepOpen(id){ renderCast(); const d = $('#castList').querySelector('[data-kid="' + id + '"]'); if(d) d.open = true; }
+$('#castAdd').onclick = () => { const k = {id:uid(), name:'새 인물', aliases:'', color:edCast.length % 8, img:'', short:'', detail:'', always:false}; edCast.push(k); renderCastKeepOpen(k.id); };
+
+/* 설정 글에서 [이름] 인물 블록 찾기 (글자 그대로 옮김) */
+let splitCand = [];
+function findCastBlocks(prompt){
+  const lines = prompt.split('\n'), heads = [];
+  lines.forEach((l, i) => { const m = /^\s*\[([^\]\n]{1,30})\]\s*$/.exec(l); if(m) heads.push({i, name:m[1].trim()}); });
+  return heads.map((h, j) => {
+    const end = j + 1 < heads.length ? heads[j + 1].i : lines.length;
+    const body = lines.slice(h.i + 1, end).join('\n').replace(/\s+$/, '');
+    return {name:h.name, start:h.i, end, body};
+  }).filter(b => /^(성별|나이|외형|성격)/m.test(b.body));
+}
+function shortOf(body){
+  const get = key => { const m = new RegExp('^' + key + '[^:：\\n]*[:：]\\s*(.+)$', 'm').exec(body); return m ? m[1].trim() : ''; };
+  return [get('성별'), get('나이'), get('성격')].filter(Boolean).join(', ');
+}
+$('#castSplit').onclick = () => {
+  splitCand = findCastBlocks($('#edPrompt').value).filter(b => !edCast.some(k => k.name === b.name));
+  if(!splitCand.length){ toast('설정 글에서 [이름] 형식의 인물 부분을 찾지 못했어요', 3500); return; }
+  $('#splitList').innerHTML = splitCand.map((b, i) => '<label class="split-item"><input type="checkbox" checked data-i="' + i + '"><span><b>' + esc(b.name) + '</b><small>' + esc(shortOf(b.body) || b.body.split('\n')[0]) + '</small></span></label>').join('');
+  openSheet('shSplit');
+};
+$('#splitApply').onclick = () => {
+  const pick = [...$('#splitList').querySelectorAll('input:checked')].map(i => splitCand[+i.dataset.i]);
+  if(!pick.length){ toast('나눌 인물을 골라 주세요'); return; }
+  const original = $('#edPrompt').value;
+  if(!edPromptBackup) edPromptBackup = original;
+  const lines = original.split('\n'), drop = new Set();
+  pick.forEach(b => { for(let i = b.start; i < b.end; i++) drop.add(i); });
+  $('#edPrompt').value = lines.filter((l, i) => !drop.has(i)).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  pick.forEach(b => {
+    edCast.push({id:uid(), name:b.name, aliases:'', color:edCast.length % 8, img:'', short:shortOf(b.body), detail:b.body.trim(), always:false, fromSplit:true});
+  });
+  closeSheet('shSplit'); renderCast();
+  toast(pick.length + '명을 카드로 나눴어요. 저장을 눌러야 적용돼요', 4000);
+};
+$('#castRevert').onclick = e => {
+  if(!armConfirm(e.currentTarget, '한 번 더 누르면 되돌려요', '나누기 전으로 되돌리기')) return;
+  $('#edPrompt').value = edPromptBackup; edCast = edCast.filter(k => !k.fromSplit); edPromptBackup = '';
+  renderCast(); toast('나누기 전으로 되돌렸어요. 저장을 눌러야 적용돼요', 3500);
+};
 function fillEdPc(){ $('#edPc').innerHTML = pcOptions(edPcVal, '공통 기본 PC'); }
 $('#edPc').onchange = e => { edPcVal = e.target.value; };
 $('#edPcList').onclick = () => openSheet('shPc');
@@ -1571,6 +1958,8 @@ function openEditor(id, focusPc){
   edPcVal = c.pcId || ''; fillEdPc();
   $('#edExport').hidden = !id;
   edLore = JSON.parse(JSON.stringify(c.lore || []));
+  edCast = JSON.parse(JSON.stringify(c.cast || [])); edPromptBackup = c.promptBackup || ''; edImgVal = c.img || '';
+  renderCast(); renderEdImg();
   renderLore();
   $('#edDel').hidden = !id;
   openSheet('shEdit');
@@ -1611,7 +2000,8 @@ function saveEditor(){
   if(!name){ toast('이름을 입력해 주세요'); $('#edName').focus(); return; }
   const data = {name, avatar:$('#edAv').value.trim(), prompt:$('#edPrompt').value, greeting:$('#edGreet').value,
     pcId:$('#edPc').value,
-    lore: edLore.filter(l => l.keys.trim() || l.text.trim())};
+    lore: edLore.filter(l => l.keys.trim() || l.text.trim()),
+    cast: edCast, promptBackup: edPromptBackup, img: edImgVal};
   if(editId){ Object.assign(state.chars.find(c => c.id === editId), data); }
   else { const c = Object.assign({id:uid(), session:null}, data); state.chars.push(c); editId = c.id; state.active = c.id; }
   persist(); renderChars(); renderAll();
@@ -1750,7 +2140,8 @@ function renderPcs(){
     d.innerHTML = '<div class="card-head"><b>' + (p.id === S.defaultPc ? '공통 기본 PC' : (used.length ? used.join(', ') + '의 기본 PC' : 'PC')) + '</b>'
       + '<span class="btns">' + (p.id === S.defaultPc ? '' : '<button class="btn sm" type="button" data-pf="def">공통 기본으로</button>')
       + '<button class="btn sm danger" type="button" data-pf="del">삭제</button></span></div>'
-      + '<input class="in" data-pf="name" maxlength="40" placeholder="이름" value="' + esc(p.name) + '">'
+      + '<div class="row"><button class="' + (p.img ? 'photo-btn av' : 'photo-btn') + '" type="button" data-pf="img"' + (p.img ? ' style="background-image:url(' + p.img + ')"' : '') + '>' + (p.img ? '' : '사진') + '</button>'
+      + '<input class="in" data-pf="name" maxlength="40" placeholder="이름" value="' + esc(p.name) + '"></div>'
       + '<textarea class="in" data-pf="desc" rows="6" placeholder="나이, 외형, 성격, 이 세계에서의 위치와 관계">' + esc(p.desc) + '</textarea>';
     box.appendChild(d);
   });
@@ -1765,6 +2156,7 @@ $('#pcList').addEventListener('input', e => {
 $('#pcList').addEventListener('click', e => {
   const b = e.target.closest('[data-pf]'); if(!b || b.tagName !== 'BUTTON') return;
   const id = b.closest('[data-pid]').dataset.pid;
+  if(b.dataset.pf === 'img'){ const p = state.pcs.find(x => x.id === id); pickImage().then(u => { if(u && p){ p.img = u; persist(); renderPcs(); } }); return; }
   if(b.dataset.pf === 'def'){ S.defaultPc = id; persist(); renderPcs(); toast('공통 기본 PC로 정했어요'); }
   if(b.dataset.pf === 'del'){
     if(!armConfirm(b, '한 번 더', '삭제', 2500)) return;
@@ -1783,6 +2175,138 @@ $('#pcAdd').onclick = () => {
   persist(); renderPcs();
   const ins = $('#pcList').querySelectorAll('[data-pf="name"]'); const last = ins[ins.length-1]; last.focus(); last.select();
 };
+
+/* ================= 장면 표시줄 ================= */
+function renderSceneBar(){
+  if(!state) return;
+  const bar = $('#sceneBar'), s = cur(), c = charOf(s), sc = currentScene(s);
+  if(!sc){
+    bar.hidden = !(S.sceneTrack && (c.cast.length || s.msgs.length));
+    $('#sbText').textContent = '장면 정보 없음 · 눌러서 적기'; $('#sbPeople').innerHTML = ''; return;
+  }
+  bar.hidden = false;
+  $('#sbText').innerHTML = [sc.time, sc.place].filter(Boolean).map(x => '<b>' + esc(x) + '</b>').join(' · ') || '장면';
+  const pc = pcOf(c, s);
+  $('#sbPeople').innerHTML = sc.people.slice(0, 7).map(p => {
+    const one = t => Array.from(String(t))[0] || '?';
+    if(pc && (p === pc.name || pc.name.includes(p) || p.includes(pc.name.split(/\s+/).pop()))) return avHTML(pc.img, one(pc.name.split(/\s+/).pop()));
+    const k = castFind(c, p);
+    return k ? avHTML(k.img, one(aliasesOf(k).pop()), '', k.color) : avHTML('', one(p));
+  }).join('');
+  $('#sceneBar').setAttribute('aria-label', '현재 장면: ' + [sc.time, sc.place, sc.people.join(', ')].filter(Boolean).join(', ') + '. 눌러서 고치기');
+}
+let scSel = [];
+function fillScene(){
+  const s = cur(), c = charOf(s), sc = currentScene(s) || {time:'', place:'', people:[]};
+  $('#scTime').value = sc.time; $('#scPlace').value = sc.place; $('#scTrack').checked = !!S.sceneTrack;
+  const pcN = pcName(c, s);
+  const names = [pcN].concat(c.cast.map(k => k.name));
+  scSel = names.filter(n => sc.people.some(p => p === n || (n === pcN ? n.includes(p) : castFind(c, p) === castFind(c, n))));
+  const others = sc.people.filter(p => !(p === pcN || pcN.includes(p) || castFind(c, p)));
+  $('#scOthers').value = others.join(', ');
+  $('#scPeople').innerHTML = names.map(n => '<button type="button" data-n="' + esc(n) + '" aria-pressed="' + scSel.includes(n) + '">' + esc(n) + '</button>').join('');
+}
+$('#scPeople').addEventListener('click', e => {
+  const b = e.target.closest('[data-n]'); if(!b) return;
+  const n = b.dataset.n, on = b.getAttribute('aria-pressed') !== 'true';
+  b.setAttribute('aria-pressed', String(on));
+  scSel = on ? scSel.concat(n) : scSel.filter(x => x !== n);
+});
+$('#scSave').onclick = () => {
+  const s = cur();
+  const people = scSel.concat($('#scOthers').value.split(/[,，、]/).map(x => x.trim()).filter(Boolean));
+  setScene(s, {time:$('#scTime').value.trim(), place:$('#scPlace').value.trim(), people});
+  S.sceneTrack = $('#scTrack').checked;
+  touch(s); persist(true); closeSheet('shScene'); toast('장면을 고쳤어요. 다음 답변부터 반영돼요');
+};
+
+/* ================= 답변 형식 ================= */
+const LEN_LABEL = {auto:'자동', short:'짧게', normal:'보통', long:'길게'}, MODE_LABEL = {auto:'자동', dialogue:'대사', balance:'균형', narration:'묘사'};
+function updateStyleChip(){
+  if(!state) return;
+  const st = cur().style || {}, parts = [];
+  if(st.len && st.len !== 'auto') parts.push(LEN_LABEL[st.len]);
+  if(st.mode && st.mode !== 'auto') parts.push(MODE_LABEL[st.mode]);
+  $('#cStyle').textContent = parts.length ? '형식: ' + parts.join('·') : '형식';
+}
+function fillStyle(){
+  const st = cur().style;
+  $('#stLen').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st.len)));
+  $('#stMode').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st.mode)));
+}
+['stLen','stMode'].forEach(id => $('#' + id).addEventListener('click', e => {
+  const b = e.target.closest('[data-v]'); if(!b) return;
+  const s = cur(); s.style[id === 'stLen' ? 'len' : 'mode'] = b.dataset.v; touch(s); fillStyle(); updateStyleChip();
+}));
+
+/* ================= 비밀·떡밥 ================= */
+function renderSecrets(){
+  const s = cur(), c = charOf(s), box = $('#secList'); box.textContent = '';
+  const list = secretList(c, s);
+  if(!list.length){ box.innerHTML = '<div class="hint">아직 항목이 없어요. \'+ 추가\'로 직접 적거나 \'설정에서 찾기\'를 눌러 보세요.</div>'; return; }
+  list.forEach(x => {
+    const d = document.createElement('div'); d.className = 'card'; d.dataset.sid = x.id; d.dataset.scope = x.scope;
+    d.innerHTML = '<div class="card-head"><b>' + (x.scope === 'char' ? '공통' : '이 대화') + '</b><button class="btn sm danger" type="button" data-sf="del">삭제</button></div>'
+      + '<input class="in" data-sf="title" placeholder="제목 (예: 쿠로미의 진짜 직업)" value="' + esc(x.title) + '">'
+      + '<textarea class="in" data-sf="detail" rows="2" placeholder="내용">' + esc(x.detail) + '</textarea>'
+      + '<div class="seg">' + ['hidden','hint','revealed'].map(v => '<button type="button" data-sf="status" data-v="' + v + '" aria-pressed="' + (x.st.status === v) + '">' + SECRET_LABEL[v] + '</button>').join('') + '</div>'
+      + '<input class="in" data-sf="knownBy" placeholder="아는 사람 (쉼표로 구분, 비우면 없음)" value="' + esc(x.st.knownBy) + '">';
+    box.appendChild(d);
+  });
+}
+function secretDef(c, s, id, scope){ return (scope === 'char' ? c.secrets : s.extraSecrets).find(x => x.id === id); }
+$('#secList').addEventListener('input', e => {
+  const card = e.target.closest('[data-sid]'), f = e.target.dataset.sf; if(!card || !f) return;
+  const s = cur(), c = charOf(s), id = card.dataset.sid;
+  if(f === 'title' || f === 'detail'){ const d = secretDef(c, s, id, card.dataset.scope); if(d) d[f] = e.target.value; }
+  if(f === 'knownBy'){ s.secretState[id] = Object.assign({status:'hidden'}, s.secretState[id], {knownBy:e.target.value}); }
+  touch(s);
+});
+$('#secList').addEventListener('click', e => {
+  const b = e.target.closest('button[data-sf]'); if(!b) return;
+  const card = b.closest('[data-sid]'), s = cur(), c = charOf(s), id = card.dataset.sid;
+  if(b.dataset.sf === 'status'){
+    const def = secretDef(c, s, id, card.dataset.scope);
+    s.secretState[id] = Object.assign({knownBy:(def && def.knownBy0) || ''}, s.secretState[id], {status:b.dataset.v});
+    card.querySelectorAll('[data-sf="status"]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); touch(s);
+  }
+  if(b.dataset.sf === 'del'){
+    if(!armConfirm(b, card.dataset.scope === 'char' ? '모든 대화에서 삭제' : '한 번 더', '삭제', 3000)) return;
+    if(card.dataset.scope === 'char') c.secrets = c.secrets.filter(x => x.id !== id); else s.extraSecrets = s.extraSecrets.filter(x => x.id !== id);
+    delete s.secretState[id]; touch(s); renderSecrets();
+  }
+});
+$('#secAdd').onclick = () => {
+  const s = cur(), c = charOf(s);
+  c.secrets.push({id:uid(), title:'', detail:'', knownBy0:''}); touch(s); renderSecrets();
+  const t = $('#secList').querySelectorAll('[data-sf="title"]'); t[t.length - 1].focus();
+};
+let secCand = [];
+$('#secFind').onclick = async () => {
+  if(busy || !ready()) return;
+  const s = cur(), c = charOf(s), btn = $('#secFind');
+  const src = c.prompt + '\n\n' + c.cast.map(k => '[' + k.name + ']\n' + k.detail).join('\n\n');
+  btn.disabled = true; $('#secFound').innerHTML = '<div class="hint" style="margin-bottom:12px">설정 글을 읽는 중…</div>';
+  try{
+    const out = await complete('', [{role:'user', text:'다음 롤플레이 설정 글에서, 어떤 인물이 다른 인물에게 숨기고 있거나 아직 드러나지 않은 사실을 모두 찾아. 설정 글에 없는 내용은 만들지 마.\n'
+      + 'JSON 배열로만 답해. 형식: [{"title":"짧은 제목","detail":"설정 글에 적힌 내용 요약","knownBy":"처음부터 알고 있는 인물(본인 제외, 없으면 빈 문자열)"}]\n\n' + src}], {quiet:true, effort:'low', thinking:'low', temp:0.2, maxTokens:4096});
+    const a = out.indexOf('['), b = out.lastIndexOf(']');
+    const arr = JSON.parse(out.slice(a, b + 1));
+    const have = secretList(c, s).map(x => x.title);
+    secCand = (Array.isArray(arr) ? arr : []).filter(x => x && x.title && !have.includes(x.title)).map(x => ({title:String(x.title), detail:String(x.detail || ''), knownBy0:String(x.knownBy || '')}));
+    $('#secFound').innerHTML = secCand.length
+      ? '<div class="sec">찾은 항목 (골라서 추가)</div>' + secCand.map((x, i) => '<label class="split-item"><input type="checkbox" checked data-i="' + i + '"><span><b>' + esc(x.title) + '</b><small>' + esc(x.detail) + (x.knownBy0 ? '\n아는 사람: ' + esc(x.knownBy0) : '') + '</small></span></label>').join('')
+        + '<div class="btns" style="margin-bottom:16px"><button class="btn primary" type="button" id="secAddFound">고른 항목 추가</button></div>'
+      : '<div class="hint" style="margin-bottom:12px">새로 찾은 항목이 없어요.</div>';
+  }catch(err){ $('#secFound').innerHTML = '<div class="hint" style="margin-bottom:12px">찾지 못했어요. ' + esc(err && err.message ? err.message : '') + '</div>'; }
+  finally{ btn.disabled = false; }
+};
+$('#secFound').addEventListener('click', e => {
+  if(e.target.id !== 'secAddFound') return;
+  const s = cur(), c = charOf(s);
+  $('#secFound').querySelectorAll('input[data-i]:checked').forEach(i => { const x = secCand[+i.dataset.i]; c.secrets.push(Object.assign({id:uid()}, x)); });
+  $('#secFound').textContent = ''; touch(s); renderSecrets(); toast('비밀 목록에 추가했어요');
+});
 
 /* ================= 유저 노트 ================= */
 function fillNote(){
@@ -1810,13 +2334,14 @@ function importPack(d){
   (d.pcs || []).forEach(p => {
     if(!p || !p.id) return;
     const ex = state.pcs.find(x => x.id === p.id);
-    if(ex) Object.assign(ex, {name:p.name || ex.name, desc:p.desc || ''}); else { state.pcs.push({id:p.id, name:p.name || '이름 없음', avatar:p.avatar || '', desc:p.desc || ''}); addP++; }
+    if(ex) Object.assign(ex, {name:p.name || ex.name, desc:p.desc || '', img:p.img || ex.img || ''}); else { state.pcs.push({id:p.id, name:p.name || '이름 없음', avatar:p.avatar || '', desc:p.desc || '', img:p.img || ''}); addP++; }
   });
   let firstId = null;
   (d.chars || []).forEach(c => {
     if(!c || !c.id) return;
     const ex = state.chars.find(x => x.id === c.id);
-    const data = {name:c.name || '이름 없음', avatar:c.avatar || '', prompt:c.prompt || '', greeting:c.greeting || '', pcId:c.pcId || '', note:c.note || '', lore:c.lore || []};
+    const data = {name:c.name || '이름 없음', avatar:c.avatar || '', prompt:c.prompt || '', greeting:c.greeting || '', pcId:c.pcId || '', note:c.note || '', lore:c.lore || [],
+      cast:c.cast || [], secrets:c.secrets || [], img:c.img || '', promptBackup:c.promptBackup || ''};
     if(ex){ Object.assign(ex, data); updC++; } else { state.chars.push(Object.assign({id:c.id, session:null}, data)); addC++; }
     firstId = firstId || c.id;
   });
@@ -1863,6 +2388,9 @@ $('#mEdit').onclick = () => openEditor(activeChar().id);
 $('#mSet').onclick = () => openSheet('shSet');
 $('#mPc').onclick = () => openSheet('shPc');
 $('#cNote').onclick = () => openSheet('shNote');
+$('#cStyle').onclick = () => openSheet('shStyle');
+$('#mSecret').onclick = () => openSheet('shSecret');
+$('#sceneBar').onclick = () => openSheet('shScene');
 
 /* ================= 설정 ================= */
 function fillSettings(){
@@ -1886,7 +2414,7 @@ function fillSettings(){
   $('#fInterval').value = S.interval; $('#fRecent').value = S.maxRecent; $('#fCompact').value = S.compactChars;
   $('#fAutoBk').checked = !!S.autoBackup;
   $('#fFont').value = S.font; $('#fontVal').textContent = S.font + 'px';
-  $('#fEnter').checked = !!S.enterSend;
+  $('#fEnter').checked = !!S.enterSend; $('#fScene').checked = !!S.sceneTrack;
   fillDefPc();
   $('#modelList').textContent = '';
   renderLockState();
@@ -1934,6 +2462,7 @@ $('#fCompact').onchange = e => { S.compactChars = Math.round(num(e.target.value,
 $('#fAutoBk').onchange = e => { S.autoBackup = e.target.checked; setS(); };
 $('#fFont').oninput = e => { S.font = Number(e.target.value); $('#fontVal').textContent = S.font + 'px'; applyFont(); setS(); };
 $('#fEnter').onchange = e => { S.enterSend = e.target.checked; setS(); };
+$('#fScene').onchange = e => { S.sceneTrack = e.target.checked; setS(); };
 function fillDefPc(){ $('#fDefPc').innerHTML = pcOptions(S.defaultPc, state.pcs.length ? '정하지 않음' : 'PC 없음'); }
 $('#fDefPc').onchange = e => { S.defaultPc = e.target.value; setS(); renderLog(true); };
 $('#fPcList').onclick = () => openSheet('shPc');
