@@ -677,7 +677,7 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
       <div class="field"><label class="lbl" for="genKeys">키워드 (쉼표로 구분)</label><input class="in" id="genKeys"></div>
       <div class="field" id="genGroupRow"><label class="lbl" for="genGroup">소속 (선택)</label><input class="in" id="genGroup" list="groupList"></div>
       <div class="field"><label class="lbl" for="genModelIn">작성 모델</label><input class="in" id="genModelIn" list="modelList" autocapitalize="off" spellcheck="false"><div class="hint" id="genModelHint"></div></div>
-      <div class="btns" style="margin-bottom:16px"><button class="btn primary" type="button" id="genGo">작성하기</button></div>
+      <div class="btns" style="margin-bottom:16px"><button class="btn primary" type="button" id="genGo">작성하기</button><button class="btn" type="button" id="genRestore" hidden>받아 둔 결과 불러오기</button></div>
       <div id="genOut" hidden>
         <hr>
         <div class="sec">결과 (고쳐서 쓸 수 있어요)</div>
@@ -803,6 +803,9 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
       </div>
       <label class="check" style="margin-bottom:16px"><input type="checkbox" id="fEnter"> Enter로 보내기 (끄면 Enter는 줄바꿈)</label>
       <label class="check" style="margin-bottom:16px"><input type="checkbox" id="fScene"> 답변마다 장면(시간·장소·인물) 자동 기록</label>
+      <label class="check" style="margin-bottom:10px"><input type="checkbox" id="fBg"> 백그라운드에서 계속 받기 (다른 앱으로 가거나 화면을 꺼도)</label>
+      <label class="check" style="margin-bottom:6px"><input type="checkbox" id="fBgNotify"> 다 받으면 알림 보내기</label>
+      <div class="hint" id="fBgHint" style="margin-bottom:14px"></div>
       <label class="check" style="margin-bottom:10px"><input type="checkbox" id="fPcGuard"> PC 대사·행동을 대신 쓴 부분 표시</label>
       <label class="check" style="margin-bottom:16px"><input type="checkbox" id="fPcAuto"> 감지되면 자동으로 한 번 다시 생성</label>
 
@@ -1034,6 +1037,7 @@ async function writeNow(){
 let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
   if(document.visibilityState === 'hidden'){ hiddenAt = Date.now(); if(state) persist(true); return; }
+  if(state){ setTimeout(() => { bgCheck(); recoverJobs(); }, 1200); }
   if(lockOn() && DEK && hiddenAt && S && Date.now() - hiddenAt >= (S.relockMin || 0) * 60000 && !busy && !summarizing.size){
     persist(true).then(() => location.reload());
   }
@@ -1071,7 +1075,7 @@ function costOf(m, u){
   return ((u.input_tokens||0)*pi + (u.output_tokens||0)*po + (u.cache_creation_input_tokens||0)*pw + (u.cache_read_input_tokens||0)*pr) / 1e6;
 }
 const DEF = {provider:'gemini', keys:{}, models:{}, sumModel:'', customBase:'', temp:1, maxTokens:8192,
-  sceneTrack:true, genModel:'', pcGuard:true, pcAuto:false, safety:'BLOCK_NONE', thinking:'low', claudeEffort:'medium', relockMin:5, lastBackup:0, usage:{usd:0, calls:0, since:0}, userName:'나', userDesc:'', defaultPc:'',
+  sceneTrack:true, genModel:'', bg:true, bgNotify:true, pcGuard:true, pcAuto:false, safety:'BLOCK_NONE', thinking:'low', claudeEffort:'medium', relockMin:5, lastBackup:0, usage:{usd:0, calls:0, since:0}, userName:'나', userDesc:'', defaultPc:'',
   interval:30, maxRecent:80, overlap:6, compactChars:6000, autoBackup:false,
   font:16.5, enterSend:false};
 
@@ -1726,6 +1730,167 @@ function geminiThinking(name, level){
 }
 const SAFETY_CATS = ['HARM_CATEGORY_HARASSMENT','HARM_CATEGORY_HATE_SPEECH','HARM_CATEGORY_SEXUALLY_EXPLICIT','HARM_CATEGORY_DANGEROUS_CONTENT'];
 
+/* ===== 백그라운드 전송: 서비스 워커가 요청을 맡아 화면이 꺼져도 끝까지 받는다 ===== */
+const bgLive = new Map();
+const bgOK = () => S.bg !== false && 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
+async function sseRequest(kind, url, init, o, onData){
+  if(!bgOK()){
+    const r = await fetch(url, init);
+    if(!r.ok) throw new Error(await httpError(r));
+    await readSSE(r, onData); return;
+  }
+  const id = uid(), ctl = navigator.serviceWorker.controller, sig = init.signal;
+  if(sig && sig.aborted) throw new DOMException('중단됨', 'AbortError');
+  return new Promise((resolve, reject) => {
+    const job = {id, t0:Date.now(), onData, o, done:false};
+    const finish = () => { job.done = true; bgLive.delete(id); if(sig) sig.removeEventListener('abort', onAbort); bgWatch(); };
+    const onAbort = () => { if(job.done) return; try{ ctl.postMessage({type:'job-abort', id}); }catch(e){} finish(); reject(new DOMException('중단됨', 'AbortError')); };
+    job.fail = err => { if(job.done) return; try{ ctl.postMessage({type:'job-abort', id}); }catch(e){} finish(); reject(err); };
+    job.end = async d => {
+      if(job.done) return;
+      finish();
+      try{ navigator.serviceWorker.controller && navigator.serviceWorker.controller.postMessage({type:'job-ack', id}); }catch(e){}
+      if(d.status === 'done'){ o.finalText = d.text; resolve(); }
+      else if(d.status === 'httperr') reject(new Error(await httpError(new Response(d.http.body || '', {status:d.http.status}))));
+      else if(d.status === 'aborted') reject(new DOMException('중단됨', 'AbortError'));
+      else if(d.status === 'lost') reject(new Error('백그라운드 작업이 중간에 멈췄어요. 다시 생성해 주세요.'));
+      else reject(d.net ? new TypeError(d.error) : new Error(d.error || '알 수 없는 오류'));
+    };
+    bgLive.set(id, job);
+    if(sig) sig.addEventListener('abort', onAbort);
+    const meta = Object.assign({kind:'quiet', model:o.model}, o.job || {});
+    const notify = o.job && o.job.notify && S.bgNotify ? o.job.notify : null;
+    const headers = Object.assign({}, init.headers);
+    ctl.postMessage({type:'job', job:{id, kind, url, headers, body:init.body, meta, notify}});
+    bgWatch();
+  });
+}
+navigator.serviceWorker && navigator.serviceWorker.addEventListener('message', e => {
+  const d = e.data || {};
+  if(d.type === 'job-data'){
+    const job = bgLive.get(d.id); if(!job || job.done) return;
+    try{ job.onData(d.j); }catch(err){ job.fail(err); }
+  } else if(d.type === 'job-end'){
+    const job = bgLive.get(d.id);
+    if(job) job.end(d); else if(state) setTimeout(recoverJobs, 300);
+  } else if(d.type === 'open-session') openSessionById(d.sid);
+});
+function swList(){
+  return new Promise(res => {
+    const ctl = navigator.serviceWorker && navigator.serviceWorker.controller; if(!ctl) return res(null);
+    const ch = new MessageChannel(); const t = setTimeout(() => res(null), 1500);
+    ch.port1.onmessage = e => { clearTimeout(t); res((e.data && e.data.ids) || []); };
+    try{ ctl.postMessage({type:'job-list'}, [ch.port2]); }catch(e){ clearTimeout(t); res(null); }
+  });
+}
+function jobsDB(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('ibanggi-jobs', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('jobs', {keyPath:'id'});
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function jobsAll(){
+  try{ const db = await jobsDB(); const out = await new Promise((res, rej) => { const q = db.transaction('jobs').objectStore('jobs').getAll(); q.onsuccess = () => res(q.result || []); q.onerror = () => rej(q.error); }); db.close(); return out; }
+  catch(e){ return []; }
+}
+async function jobsDel(id){
+  try{ const db = await jobsDB(); await new Promise(res => { const tx = db.transaction('jobs', 'readwrite'); tx.objectStore('jobs').delete(id); tx.oncomplete = res; tx.onerror = res; }); db.close(); }catch(e){}
+}
+/* 메시지가 끊긴 작업 감시: 워커가 이미 끝냈거나 멈췄는데 화면이 모르는 경우 */
+let bgTimer = null;
+function bgWatch(){
+  if(bgLive.size && !bgTimer) bgTimer = setInterval(bgCheck, 12000);
+  if(!bgLive.size && bgTimer){ clearInterval(bgTimer); bgTimer = null; }
+}
+async function bgCheck(){
+  if(!bgLive.size) return;
+  const ids = await swList(); if(ids === null) return;
+  const recs = await jobsAll();
+  for(const [id, job] of bgLive){
+    if(ids.includes(id) || Date.now() - job.t0 < 8000) continue;
+    const r = recs.find(x => x.id === id);
+    if(r && r.status !== 'running') job.end(r);
+    else job.end({status:'lost'});
+  }
+}
+let recovering = false;
+async function recoverJobs(){
+  if(recovering || !state || !('serviceWorker' in navigator)) return;
+  recovering = true;
+  try{
+    const recs = (await jobsAll()).filter(r => !bgLive.has(r.id)); if(!recs.length) return;
+    const ids = await swList(); if(ids === null) return;
+    let changed = false;
+    for(const r of recs){
+      if(ids.includes(r.id)) continue;
+      if(r.status === 'running' && Date.now() - r.t0 < 10000) continue;
+      changed = applyRecovered(r) || changed;
+      await jobsDel(r.id);
+    }
+    if(changed){ persist(true); renderAll(); }
+  } finally { recovering = false; }
+}
+function cleanReply(t){ return splitScene(takeStat(takeEvents(t).text).text); }
+function applyRecovered(r){
+  const m = r.meta || {}, cut = r.status === 'running', ok = r.status === 'done' || (cut && r.text.trim());
+  if(!['chat','ooc','gen'].includes(m.kind)) return false;
+  if(!ok){ toast('백그라운드 작업이 실패했어요' + (r.error ? ': ' + r.error.slice(0, 120) : r.http ? ' (오류 ' + r.http.status + ')' : ''), 5000); return false; }
+  if(r.usage && (r.usage.input_tokens || r.usage.output_tokens) && m.model && /claude/.test(m.model)){
+    const usd = costOf(m.model, r.usage); S.usage.usd += usd; S.usage.calls++;
+    const ss = state.sessions[m.sid]; if(ss) ss.cost = (ss.cost || 0) + usd;
+  }
+  if(m.kind === 'gen'){
+    state.genStash = {mode:m.mode, cid:m.cid || '', text:r.text, at:Date.now()};
+    toast('AI 작성 결과를 받아 뒀어요. 같은 작성 창을 열면 불러올 수 있어요', 5000); return true;
+  }
+  const s = state.sessions[m.sid]; if(!s) return false;
+  if(m.kind === 'ooc'){
+    const a = cleanReply(r.text).text || '(빈 답변)';
+    const it = s.ooc.find(x => x.at === m.at); if(it) it.a = a; else s.ooc.push({q:m.q || '', a, at:m.at || Date.now()});
+    toast('OOC 답이 도착했어요', 3500); s.updated = Date.now(); return true;
+  }
+  const c = charOf(s), ev = takeEvents(r.text), tst = takeStat(ev.text), sp = splitScene(tst.text);
+  if(!sp.text.trim()) return false;
+  let am = null;
+  const tg = m.target && s.msgs.find(x => x.id === m.target);
+  if(tg){
+    if(!tg.alts){ tg.alts = [tg.text]; tg.ai = 0; }
+    if(!tg.altScenes) tg.altScenes = tg.alts.map((x, j) => j === (tg.ai || 0) ? tg.scene || null : null);
+    if(!tg.altStats) tg.altStats = tg.alts.map((x, j) => j === (tg.ai || 0) ? tg.stat || null : null);
+    am = tg;
+  } else {
+    am = s.msgs.find(x => x.id === m.mid);
+    if(!am){ am = {id:m.mid || uid(), role:'assistant', text:''}; s.msgs.push(am); }
+  }
+  const i = s.msgs.indexOf(am);
+  const base = statOf(s, s.msgs.slice(0, i));
+  const text = sp.text + (cut ? '\n\n*(연결이 끊겨 여기까지 받았어요)*' : '');
+  const scene = sp.scene || (tg ? tg.scene : null) || null, st = mergeStat(c, base, tst);
+  if(tg){ tg.alts.push(text); tg.altScenes.push(scene); tg.altStats.push(st); tg.ai = tg.alts.length - 1; }
+  am.text = text; am.scene = scene; am.stat = st;
+  if(ev.ids.length) (s.events || []).filter(e => ev.ids.includes(e.n) && e.status !== 'done').forEach(e => { e.status = 'done'; e.doneTurn = turnCount(s.msgs); });
+  s.updated = Date.now();
+  toast(cut ? '백그라운드 답변이 중간에 끊겼어요. 받은 데까지 붙였어요' : '백그라운드에서 받은 답변을 붙였어요', 4000);
+  return true;
+}
+function openSessionById(sid){
+  if(!state || !sid) return;
+  const s = state.sessions[sid]; if(!s) return;
+  if(busy && cur().id !== sid){ toast('생성이 끝난 뒤에 바꿔 주세요'); return; }
+  const c = state.chars.find(x => x.id === s.charId); if(!c) return;
+  state.active = c.id; c.session = s.id;
+  if(stack.length) closeTopSheets(stack.length);
+  persist(); hideErr(); renderAll();
+}
+function maybeAskNotify(){
+  try{
+    if(!S.bg || !S.bgNotify || !('Notification' in window) || Notification.permission !== 'default' || S.notifyAsked) return;
+    S.notifyAsked = true; persist();
+    Notification.requestPermission().then(p => { if(p === 'granted') toast('끝나면 알림으로 알려 드릴게요'); });
+  }catch(e){}
+}
+
 async function streamGemini(o){
   const name = o.model.replace(/^models\//, '');
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(name)
@@ -1741,10 +1906,8 @@ async function streamGemini(o){
   };
   if(o.sys) body.systemInstruction = {parts:[{text:o.sys}]};
   if(S.safety !== 'default') body.safetySettings = SAFETY_CATS.map(c => ({category:c, threshold:S.safety}));
-  const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), signal:o.signal});
-  if(!r.ok) throw new Error(await httpError(r));
   let blocked = '', got = false;
-  await readSSE(r, j => {
+  await sseRequest('gemini', url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), signal:o.signal}, o, j => {
     if(j.error) throw new Error(j.error.message || '알 수 없는 오류');
     if(j.promptFeedback && j.promptFeedback.blockReason) blocked = j.promptFeedback.blockReason;
     const c = j.candidates && j.candidates[0];
@@ -1767,9 +1930,7 @@ async function streamOpenAI(o){
   if(!base) throw new Error('API 주소를 먼저 입력해 주세요.');
   const messages = (o.sys ? [{role:'system', content:o.sys}] : []).concat(o.hist.map(m => ({role:m.role, content:m.text})));
   const body = {model:o.model, messages, stream:true, temperature:o.temp, max_tokens:o.maxTokens};
-  const r = await fetch(base + '/chat/completions', {method:'POST', headers:authHeaders(), body:JSON.stringify(body), signal:o.signal});
-  if(!r.ok) throw new Error(await httpError(r));
-  await readSSE(r, j => {
+  await sseRequest('openai', base + '/chat/completions', {method:'POST', headers:authHeaders(), body:JSON.stringify(body), signal:o.signal}, o, j => {
     if(j.error) throw new Error(typeof j.error === 'string' ? j.error : (j.error.message || '알 수 없는 오류'));
     const d = j.choices && j.choices[0] && j.choices[0].delta;
     if(d && d.content) o.onDelta(d.content);
@@ -1802,11 +1963,9 @@ async function streamClaude(o){
   if(system.length) body.system = system;
   if(tk.effort) body.output_config = {effort:tk.effort};
   if(tk.thinking) body.thinking = tk.thinking;
-  const r = await fetch('https://api.anthropic.com/v1/messages', {method:'POST', headers:claudeHeaders(), body:JSON.stringify(body), signal:o.signal});
-  if(!r.ok) throw new Error(await httpError(r));
   const usage = {};
   let stop = '';
-  await readSSE(r, j => {
+  await sseRequest('claude', 'https://api.anthropic.com/v1/messages', {method:'POST', headers:claudeHeaders(), body:JSON.stringify(body), signal:o.signal}, o, j => {
     if(j.type === 'error') throw new Error((j.error && j.error.message) || '알 수 없는 오류');
     if(j.type === 'message_start' && j.message && j.message.usage) Object.assign(usage, j.message.usage);
     if(j.type === 'message_delta'){ if(j.usage) Object.assign(usage, j.usage); if(j.delta && j.delta.stop_reason) stop = j.delta.stop_reason; }
@@ -1830,8 +1989,9 @@ function streamChat(o){
 }
 async function complete(sys, hist, opts){
   let out = '';
-  await streamChat(Object.assign({sys, hist, onDelta: t => { out += t; }}, opts || {}));
-  return out;
+  const o = Object.assign({sys, hist, onDelta: t => { out += t; }}, opts || {});
+  await streamChat(o);
+  return typeof o.finalText === 'string' ? o.finalText : out;
 }
 const netMsg = e => e instanceof TypeError ? '네트워크에 연결하지 못했어요. 연결 상태와 API 주소를 확인해 주세요.' : e.message;
 
@@ -1862,8 +2022,10 @@ async function generate(opt){
   }, 1000);
   let ok = false;
   try{
-    const call = {sys, sysParts, hist, session:s, signal:abortCtl.signal, onDelta: t => { am.text += t; paint(am); }};
+    const call = {sys, sysParts, hist, session:s, signal:abortCtl.signal, onDelta: t => { am.text += t; paint(am); },
+      job:{kind:'chat', sid:s.id, mid:am.id, target:target ? target.id : '', notify:{title:charOf(s).name, preview:!lockOn(), sid:s.id}}};
     await streamChat(call);
+    if(typeof call.finalText === 'string' && call.finalText.length >= am.text.length) am.text = call.finalText;
     if(call.usage) lastUsage = {usd:call.lastCost, u:call.usage};
     if(!am.text) throw new Error('빈 응답이 왔어요. 다시 생성해 보세요.');
     ok = true;
@@ -1903,6 +2065,7 @@ async function generate(opt){
 }
 function pcFixDir(s){ const n = pcName(charOf(s), s); return n + '의 대사, 행동, 생각을 쓰지 않는다. 다른 인물의 반응까지만 쓰고 ' + n + '가 반응할 여지를 남긴다'; }
 function ready(){
+  maybeAskNotify();
   if(missingKey()){ toast(S.provider === 'custom' ? 'API 주소를 입력해 주세요' : 'API 키를 먼저 입력해 주세요'); openSheet('shSet'); return false; }
   return true;
 }
@@ -2919,7 +3082,7 @@ $('#oocSend').onclick = async () => {
     const last = hist[hist.length - 1];
     const qtext = '[OOC 질문 — 이야기 밖에서 진행자에게]\n' + q + '\n\n이야기를 이어 쓰지 말고, 진행자로서 이야기 밖에서 짧고 분명하게 답한다. 설정과 지금까지의 진행을 근거로 답하고, 아직 정해지지 않은 부분은 그렇다고 말한 뒤 가능한 방향을 제안한다.';
     if(last.role === 'user') last.text += '\n\n' + qtext; else hist.push({role:'user', text:qtext});
-    const out = await complete(sys, hist, {quiet:true, temp:0.7});
+    const out = await complete(sys, hist, {quiet:true, temp:0.7, job:{kind:'ooc', sid:s.id, q, at:item.at, notify:{title:charOf(s).name + ' · OOC', preview:!lockOn(), sid:s.id}}});
     item.a = splitScene(takeStat(takeEvents(out).text).text).text || '(빈 답변)';
   }catch(err){ item.a = '답을 받지 못했어요. ' + (err && err.message ? err.message : ''); }
   finally{ oocBusy = false; $('#oocSend').disabled = false; touch(s); renderOoc(); }
@@ -3027,6 +3190,8 @@ function openGen(mode){
   $('#genNameRow').hidden = mode === 'world'; $('#genAliasRow').hidden = mode !== 'cast'; $('#genShortRow').hidden = mode !== 'cast';
   $('#genTextLbl').textContent = g.text; $('#genApply').textContent = g.apply;
   $('#genOut').hidden = true;
+  const gs = state.genStash;
+  $('#genRestore').hidden = !(gs && gs.mode === mode && (mode === 'pc' || !gs.cid || gs.cid === editId));
   openSheet('shGen');
 }
 function genPrompt(){
@@ -3071,8 +3236,15 @@ async function runGen(){
   genBusy = true; const btn = $('#genGo'); btn.disabled = true; btn.textContent = '작성 중…'; $('#genRetry').disabled = true;
   try{
     const out = await complete('너는 롤플레이 세계관과 인물 설정을 쓰는 작가다. 요청한 형식만 출력하고 다른 말은 덧붙이지 않는다. 한국어로 쓴다.',
-      [{role:'user', text:genPrompt()}], {quiet:true, model:genModelName(), temp:0.9, maxTokens:8192, effort:'medium'});
+      [{role:'user', text:genPrompt()}], {quiet:true, model:genModelName(), temp:0.9, maxTokens:8192, effort:'medium',
+        job:{kind:'gen', mode:genMode, cid:genMode === 'pc' ? '' : (editId || ''), notify:{title:'AI ' + GEN_INFO[genMode].title, body:'작성이 끝났어요. 열어서 확인해 주세요'}}});
     if(!out.trim()) throw new Error('빈 결과가 왔어요');
+    fillGenOut(out);
+  }catch(e){ if(e && e.name !== 'AbortError') toast('작성하지 못했어요. ' + (e && e.message ? e.message : ''), 5000); }
+  finally{ genBusy = false; btn.disabled = false; btn.textContent = '작성하기'; $('#genRetry').disabled = false; }
+}
+function fillGenOut(out){
+  {
     const p = parseGen(out);
     if(genMode === 'world'){ $('#genText').value = out.trim(); }
     else {
@@ -3086,10 +3258,10 @@ async function runGen(){
     $('#genApply').textContent = genMode === 'world' && !$('#edPrompt').value.trim() ? '설정 글로 쓰기' : GEN_INFO[genMode].apply;
     $('#genOut').hidden = false;
     setTimeout(() => $('#genOut').scrollIntoView({block:'start', behavior:'smooth'}), 50);
-  }catch(e){ toast('작성하지 못했어요. ' + (e && e.message ? e.message : ''), 5000); }
-  finally{ genBusy = false; btn.disabled = false; btn.textContent = '작성하기'; $('#genRetry').disabled = false; }
+  }
 }
 $('#genGo').onclick = runGen;
+$('#genRestore').onclick = () => { const gs = state.genStash; if(!gs) return; fillGenOut(gs.text); delete state.genStash; persist(); $('#genRestore').hidden = true; };
 $('#genRetry').onclick = runGen;
 function applyGen(append){
   const text = $('#genText').value.trim(); if(!text){ toast('내용이 비어 있어요'); return; }
@@ -3252,7 +3424,7 @@ function fillSettings(){
   $('#fInterval').value = S.interval; $('#fRecent').value = S.maxRecent; $('#fCompact').value = S.compactChars;
   $('#fAutoBk').checked = !!S.autoBackup;
   $('#fFont').value = S.font; $('#fontVal').textContent = S.font + 'px';
-  $('#fEnter').checked = !!S.enterSend; $('#fScene').checked = !!S.sceneTrack; $('#fPcGuard').checked = !!S.pcGuard; $('#fPcAuto').checked = !!S.pcAuto;
+  $('#fEnter').checked = !!S.enterSend; $('#fScene').checked = !!S.sceneTrack; $('#fPcGuard').checked = !!S.pcGuard; $('#fBg').checked = S.bg !== false; $('#fBgNotify').checked = !!S.bgNotify; bgHint(); $('#fPcAuto').checked = !!S.pcAuto;
   fillDefPc();
   $('#modelList').textContent = '';
   renderLockState();
@@ -3302,6 +3474,20 @@ $('#fAutoBk').onchange = e => { S.autoBackup = e.target.checked; setS(); };
 $('#fFont').oninput = e => { S.font = Number(e.target.value); $('#fontVal').textContent = S.font + 'px'; applyFont(); setS(); };
 $('#fEnter').onchange = e => { S.enterSend = e.target.checked; setS(); };
 $('#fScene').onchange = e => { S.sceneTrack = e.target.checked; setS(); };
+function bgHint(){
+  const sw = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
+  const perm = 'Notification' in window ? Notification.permission : 'none';
+  $('#fBgHint').textContent = !sw ? '이 화면에서는 아직 쓸 수 없어요. 사이트를 한 번 새로고침하면 켜져요.'
+    : perm === 'denied' ? '알림이 차단돼 있어요. 크롬의 사이트 설정에서 알림을 허용해 주세요.'
+    : perm === 'default' && S.bgNotify ? '처음 보낼 때 알림 허용을 물어봐요.'
+    : '답변, AI 작성, OOC 답이 끝나면 화면을 보고 있지 않을 때만 알림이 와요. 크롬이 길게(5분 넘게) 걸리는 작업은 끊을 수 있어요.';
+}
+$('#fBg').onchange = e => { S.bg = e.target.checked; persist(); bgHint(); };
+$('#fBgNotify').onchange = e => {
+  S.bgNotify = e.target.checked; persist();
+  if(S.bgNotify && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission().then(bgHint);
+  bgHint();
+};
 $('#fPcGuard').onchange = e => { S.pcGuard = e.target.checked; setS(); renderLog(true); };
 $('#fPcAuto').onchange = e => { S.pcAuto = e.target.checked; setS(); };
 function fillDefPc(){ $('#fDefPc').innerHTML = pcOptions(S.defaultPc, state.pcs.length ? '정하지 않음' : 'PC 없음'); }
@@ -3437,6 +3623,11 @@ async function start(){
   if(state.notice){ const n = state.notice; delete state.notice; persist(); setTimeout(() => toast(n, 5000), 600); }
   checkBackupReminder();
   checkSaveHash();
+  try{
+    const sp = new URLSearchParams(location.search), sid = sp.get('s');
+    if(sid){ history.replaceState(null, '', location.pathname + location.hash); openSessionById(sid); }
+  }catch(e){}
+  setTimeout(recoverJobs, 800);
   try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
 }
 window.addEventListener('hashchange', () => { if(state) checkSaveHash(); });
@@ -3464,11 +3655,12 @@ $('#lockWipe').onclick = e => {
   }
   await start();
 })();
-if('serviceWorker' in navigator && location.protocol === 'https:'){
+if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')){
   navigator.serviceWorker.register('sw.js').catch(() => {});
+  try{ navigator.serviceWorker.startMessages(); }catch(e){}
 }
 
-window.__ibanggi = {lockOn, aliasesOf, castFind, activeCast, currentScene, parseSummary, buildContext: (...a) => buildContext(...a), systemText: (...a) => systemText(...a), get state(){ return state; }};
+window.__ibanggi = {bgLive, bgOK, recoverJobs, lockOn, aliasesOf, castFind, activeCast, currentScene, parseSummary, buildContext: (...a) => buildContext(...a), systemText: (...a) => systemText(...a), get state(){ return state; }};
 })();
 </script>
 </body>
