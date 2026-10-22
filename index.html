@@ -180,6 +180,20 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
 .photo-btn.av{border-style:solid;width:56px;height:56px;font-size:18px}
 .split-item{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
 .split-item input{width:20px;height:20px;margin-top:2px;accent-color:var(--accent);flex:none}
+.pcsay{text-decoration:underline wavy var(--danger);text-underline-offset:4px;text-decoration-thickness:1px}
+.pcwarn{display:grid;gap:8px;margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--surface2);font-size:13px;color:var(--ink)}
+.pcwarn b{color:var(--danger)}
+.pcwarn q{color:var(--muted)}
+.skipmark{align-self:center;display:flex;align-items:center;gap:8px;width:100%;font-size:12px;color:var(--accent);letter-spacing:.04em}
+.skipmark::before,.skipmark::after{content:"";flex:1;border-top:1px solid var(--line)}
+.skipmark span{max-width:80%;text-align:center}
+.ooc-log{display:grid;gap:12px;margin-bottom:14px}
+.ooc-q{justify-self:end;max-width:88%;background:var(--user);padding:8px 12px;border-radius:14px 14px 4px 14px;white-space:pre-wrap;font-size:14px}
+.ooc-a{max-width:100%;padding:10px 12px;border-radius:14px;border:1px solid var(--line);white-space:pre-wrap;font-size:14px;line-height:1.7}
+.ooc-a .btns{margin-top:8px}
+.ev-state{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--surface2);color:var(--muted)}
+.ev-state.due{background:var(--accent);color:var(--accent-ink)}
+.ev-state.done{color:var(--ok)}
 .split-item small{display:block;color:var(--muted);font-size:12px;margin-top:2px;white-space:pre-wrap}
 #lock{position:fixed;inset:0;z-index:50;background:var(--bg);display:grid;place-items:center;
   padding:calc(24px + env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(24px,env(safe-area-inset-left,0px))}
@@ -236,6 +250,8 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
     <button class="chip" id="cStyle">형식</button>
     <button class="chip" id="cNote">유저 노트</button>
     <button class="chip" id="cUndo">마지막 턴 취소</button>
+    <button class="chip" id="cSkip">시간 건너뛰기</button>
+    <button class="chip" id="cOoc">OOC 질문</button>
     <button class="chip" id="cSum">지금 요약</button>
   </div>
   <form class="composer" id="composer" autocomplete="off">
@@ -249,6 +265,7 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
     <button id="mEdit">캐릭터 편집</button>
     <button id="mPc">PC 목록</button>
     <button id="mSecret">비밀·떡밥</button>
+    <button id="mEvent">사건 예약</button>
     <button id="mTxt">대화를 텍스트 파일로 저장</button>
     <button id="mCopy">대화 전체 복사</button>
     <button id="mSet">설정</button>
@@ -396,6 +413,75 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
   </div>
 </section>
 
+<!-- 세이브 불러오기 -->
+<section class="sheet" id="shSave" aria-label="세이브 불러오기">
+  <div class="back" data-close="shSave"></div>
+  <div class="panel">
+    <div class="panel-head"><h2>세이브 불러오기</h2><button class="btn" data-close="shSave">닫기</button></div>
+    <div class="panel-body">
+      <div id="savePreview"></div>
+      <div id="saveInputArea">
+        <div class="field">
+          <label class="lbl" for="saveCode">세이브 코드 붙여넣기</label>
+          <textarea class="in" id="saveCode" rows="4" placeholder="IBG1.로 시작하는 코드나 세이브 링크를 붙여 넣으세요" autocapitalize="off" spellcheck="false"></textarea>
+        </div>
+        <div class="btns" style="margin-bottom:16px"><button class="btn primary" id="saveCheck" type="button">코드 확인</button><button class="btn" id="saveFilePick" type="button">파일에서 고르기</button></div>
+        <div class="hint">세이브 링크는 열기만 하면 이 화면이 뜨고, 확인을 누르면 바로 적용돼요.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 사건 예약 -->
+<section class="sheet" id="shEvent" aria-label="사건 예약">
+  <div class="back" data-close="shEvent"></div>
+  <div class="panel">
+    <div class="panel-head"><h2>사건 예약</h2><button class="btn" data-close="shEvent">닫기</button></div>
+    <div class="panel-body">
+      <div class="hint" style="margin-bottom:12px">앞으로 일어날 일을 미리 걸어 두면, 때가 됐을 때 진행자가 자연스러운 계기를 만들어 일으켜요. 예약 내용은 이야기 속 인물이나 화면에 미리 드러나지 않아요.</div>
+      <div class="card" style="margin-bottom:16px">
+        <textarea class="in" id="evText" rows="3" placeholder="예: 히요리가 학교에서 다친 채로 귀가한다"></textarea>
+        <div class="seg" id="evMode"><button type="button" data-v="turns" aria-pressed="true">몇 턴 뒤</button><button type="button" data-v="story" aria-pressed="false">이야기 속 조건</button></div>
+        <input class="in" id="evTurns" type="number" inputmode="numeric" min="0" max="500" value="10" aria-label="몇 턴 뒤">
+        <input class="in" id="evStory" placeholder="예: 이야기 속에서 3일 뒤 / 하루토가 집에 없을 때" hidden>
+        <div class="btns"><button class="btn primary" id="evAdd" type="button">예약하기</button></div>
+      </div>
+      <div id="evList"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 시간 건너뛰기 -->
+<section class="sheet" id="shSkip" aria-label="시간 건너뛰기">
+  <div class="back" data-close="shSkip"></div>
+  <div class="panel">
+    <div class="panel-head"><h2>시간 건너뛰기</h2><button class="btn" data-close="shSkip">닫기</button></div>
+    <div class="panel-body">
+      <div class="field"><span class="lbl">어디로</span><div class="seg" id="skQuick">
+        <button type="button">잠시 뒤</button><button type="button">그날 밤</button><button type="button">다음 날 아침</button><button type="button">주말</button><button type="button">일주일 뒤</button>
+      </div></div>
+      <div class="field"><label class="lbl" for="skTo">직접 입력</label><input class="in" id="skTo" placeholder="예: 사흘 뒤 저녁, 히요리 하교 시간"></div>
+      <div class="field"><label class="lbl" for="skNote">그동안 있었던 일 (선택)</label><textarea class="in" id="skNote" rows="3" placeholder="예: 레나는 이틀 동안 몸살로 누워 있었다"></textarea></div>
+      <div class="btns"><button class="btn primary" id="skGo" type="button">건너뛰기</button></div>
+      <div class="hint" style="margin-top:10px">건너뛴 사이의 일을 한두 문장으로 정리하고 새 시점의 장면을 열어요.</div>
+    </div>
+  </div>
+</section>
+
+<!-- OOC 질문 -->
+<section class="sheet" id="shOoc" aria-label="OOC 질문">
+  <div class="back" data-close="shOoc"></div>
+  <div class="panel">
+    <div class="panel-head"><h2>OOC 질문</h2><button class="btn" data-close="shOoc">닫기</button></div>
+    <div class="panel-body">
+      <div class="hint" style="margin-bottom:12px">이야기 밖에서 진행자에게 묻는 창이에요. 여기서 나눈 말은 이야기 기록에 들어가지 않아요.</div>
+      <div class="ooc-log" id="oocLog"></div>
+      <div class="field"><textarea class="in" id="oocQ" rows="3" placeholder="예: 지금 히요리 상태 어때? 하루토가 눈치챘을까?"></textarea></div>
+      <div class="btns"><button class="btn primary" id="oocSend" type="button">묻기</button><button class="btn" id="oocClear" type="button">질문 기록 지우기</button></div>
+    </div>
+  </div>
+</section>
+
 <!-- PC 목록 -->
 <section class="sheet" id="shPc" aria-label="PC 목록">
   <div class="back" data-close="shPc"></div>
@@ -455,6 +541,7 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
       <div class="btns">
         <button class="btn primary" id="edSave2">저장</button>
         <button class="btn" id="edExport" type="button">이 캐릭터 내보내기</button>
+        <button class="btn" id="edLink" type="button">세이브 링크 복사</button>
         <button class="btn danger" id="edDel">캐릭터 삭제</button>
       </div>
       <div class="hint" style="margin-top:10px">내보내기 파일에는 캐릭터 설정, 설정 사전, 기본 PC가 들어가요. 대화는 들어가지 않아요. 다른 기기에서 캐릭터 목록의 '가져오기'로 넣으면 기존 데이터에 더해져요.</div>
@@ -570,6 +657,8 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
       </div>
       <label class="check" style="margin-bottom:16px"><input type="checkbox" id="fEnter"> Enter로 보내기 (끄면 Enter는 줄바꿈)</label>
       <label class="check" style="margin-bottom:16px"><input type="checkbox" id="fScene"> 답변마다 장면(시간·장소·인물) 자동 기록</label>
+      <label class="check" style="margin-bottom:10px"><input type="checkbox" id="fPcGuard"> PC 대사·행동을 대신 쓴 부분 표시</label>
+      <label class="check" style="margin-bottom:16px"><input type="checkbox" id="fPcAuto"> 감지되면 자동으로 한 번 다시 생성</label>
 
       <hr>
       <div class="sec">PC</div>
@@ -599,10 +688,11 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
       <div class="btns">
         <button class="btn" id="bkExport" type="button">백업 저장</button>
         <button class="btn" id="bkImport" type="button">백업 불러오기</button>
+        <button class="btn" id="bkCode" type="button">전체 세이브 코드 복사</button>
         <button class="btn danger" id="bkWipe" type="button">모든 데이터 삭제</button>
       </div>
-      <input type="file" id="bkFile" accept="application/json,.json" hidden>
-      <input type="file" id="packFile" accept="application/json,.json" hidden>
+      <input type="file" id="bkFile" hidden>
+      <input type="file" id="packFile" hidden>
       <input type="file" id="imgFile" accept="image/*" hidden>
       <div class="hint" id="storeInfo" style="margin-top:10px"></div>
     </div>
@@ -835,7 +925,7 @@ function costOf(m, u){
   return ((u.input_tokens||0)*pi + (u.output_tokens||0)*po + (u.cache_creation_input_tokens||0)*pw + (u.cache_read_input_tokens||0)*pr) / 1e6;
 }
 const DEF = {provider:'gemini', keys:{}, models:{}, sumModel:'', customBase:'', temp:1, maxTokens:8192,
-  sceneTrack:true, safety:'BLOCK_NONE', thinking:'low', claudeEffort:'medium', relockMin:5, lastBackup:0, usage:{usd:0, calls:0, since:0}, userName:'나', userDesc:'', defaultPc:'',
+  sceneTrack:true, pcGuard:true, pcAuto:false, safety:'BLOCK_NONE', thinking:'low', claudeEffort:'medium', relockMin:5, lastBackup:0, usage:{usd:0, calls:0, since:0}, userName:'나', userDesc:'', defaultPc:'',
   interval:30, maxRecent:80, overlap:6, compactChars:6000, autoBackup:false,
   font:16.5, enterSend:false};
 
@@ -925,6 +1015,8 @@ function normalize(st){
     s.secretState = s.secretState && typeof s.secretState === 'object' ? s.secretState : {};
     s.extraSecrets = Array.isArray(s.extraSecrets) ? s.extraSecrets : [];
     s.style = Object.assign({len:'auto', mode:'auto'}, s.style || {});
+    s.events = Array.isArray(s.events) ? s.events : [];
+    s.ooc = Array.isArray(s.ooc) ? s.ooc : [];
   }
   if(!Array.isArray(st.pcs)) st.pcs = [];
   st.pcs = st.pcs.map(p => ({id:String(p.id || uid()), name:String(p.name || '이름 없음'), avatar:String(p.avatar || ''), desc:String(p.desc || ''), img:String(p.img || '')}));
@@ -990,7 +1082,7 @@ function newSession(c, title){
   const sid = uid();
   const n = charSessions(c.id).length + 1;
   const s = {id:sid, charId:c.id, title: title || ('대화 ' + n), created:Date.now(), updated:Date.now(), msgs:[], mem:newMem(), draft:'',
-    pcId:'', scene:null, secretState:{}, extraSecrets:[], style:{len:'auto', mode:'auto'}};
+    pcId:'', scene:null, secretState:{}, extraSecrets:[], style:{len:'auto', mode:'auto'}, events:[], ooc:[]};
   if(c.greeting && c.greeting.trim()) s.msgs.push({id:uid(), role:'assistant', text:expand(c.greeting, c)});
   state.sessions[sid] = s; c.session = sid;
   return s;
@@ -1002,6 +1094,8 @@ function cur(){
   if(!s.style) s.style = {len:'auto', mode:'auto'};
   if(!s.secretState) s.secretState = {};
   if(!s.extraSecrets) s.extraSecrets = [];
+  if(!s.events) s.events = [];
+  if(!s.ooc) s.ooc = [];
   return s;
 }
 function touch(s){ s.updated = Date.now(); persist(); }
@@ -1038,6 +1132,11 @@ function renderHeader(){
   $('#notice').hidden = !missingKey();
 }
 function msgNode(m, i, msgs, s){
+  if(m.kind === 'skip'){
+    const d = document.createElement('article'); d.className = 'msg skipmark'; d.dataset.id = m.id;
+    d.innerHTML = '<span>' + esc(m.skipTo) + '(으)로 건너뜀' + (m.skipNote ? ' · ' + esc(m.skipNote) : '') + '</span>';
+    return d;
+  }
   const d = document.createElement('article');
   d.className = 'msg ' + (m.role === 'user' ? 'user' : 'ai');
   d.dataset.id = m.id;
@@ -1046,7 +1145,16 @@ function msgNode(m, i, msgs, s){
   }
   const b = document.createElement('div');
   b.className = 'body' + (m.id === streamingId ? ' streaming' : '');
-  b.innerHTML = m.role === 'user' ? fmt(m.text) : fmtAI(m.text, speakersFor(charOf(s))); d.appendChild(b);
+  b.innerHTML = m.role === 'user' ? fmt(m.text) : fmtAI(m.text, speakersFor(charOf(s), s)); d.appendChild(b);
+  if(m.role !== 'user' && i === msgs.length - 1 && !busy && S.pcGuard && !m.pcOk){
+    const hit = detectPc(m.text, charOf(s), s);
+    if(hit.length){
+      const w = document.createElement('div'); w.className = 'pcwarn';
+      w.innerHTML = '<span><b>' + esc(pcName(charOf(s), s)) + '</b>의 대사나 행동을 대신 쓴 부분이 있어요: ' + hit.slice(0, 2).map(x => '<q>' + esc(x.length > 40 ? x.slice(0, 40) + '…' : x) + '</q>').join(' ') + '</span>'
+        + '<div class="btns"><button class="btn sm primary" type="button" data-act="pcfix">PC 부분 빼고 다시 생성</button><button class="btn sm" type="button" data-act="pcok">괜찮아요</button></div>';
+      d.appendChild(w);
+    }
+  }
   if(m.role !== 'user' && i === msgs.length - 1 && !busy){
     const sw = document.createElement('div'); sw.className = 'swipe';
     const n = m.alts ? m.alts.length : 1, k = m.alts ? (m.ai || 0) + 1 : 1;
@@ -1101,7 +1209,7 @@ function paint(am){
     if(!n) return;
     const log = $('#log');
     const stick = log.scrollHeight - log.scrollTop - log.clientHeight < 140;
-    n.innerHTML = fmtAI(am.text, speakersFor(activeChar()));
+    n.innerHTML = fmtAI(am.text, speakersFor(activeChar(), cur()));
     if(stick) log.scrollTop = log.scrollHeight;
   });
 }
@@ -1121,6 +1229,12 @@ function castFind(c, name){
   return c.cast.find(k => aliasesOf(k).some(a => a === name || name.includes(a) || a.includes(name))) || null;
 }
 const SCENE_RE = /\[\[\s*장면\s*[:：]([^\]]*)\]\]/;
+const EVENT_RE = /\[\[\s*사건\s*[:：]\s*([^\]]*)\]\]/g;
+function takeEvents(text){
+  const ids = []; let m; EVENT_RE.lastIndex = 0;
+  while((m = EVENT_RE.exec(text))) m[1].split(/[,，\s]+/).forEach(x => { const n = parseInt(x.replace(/^E/i, ''), 10); if(n) ids.push(n); });
+  return {text:text.replace(EVENT_RE, ''), ids};
+}
 function splitScene(text){
   text = String(text || '');
   const m = SCENE_RE.exec(text);
@@ -1154,7 +1268,39 @@ function secretList(c, s){
 const SECRET_LABEL = {hidden:'숨김', hint:'단서가 나옴', revealed:'드러남'};
 
 /* 대사 색: 따옴표 앞에 나온 인물 이름(주어 조사 우선)으로 말한 사람을 판단 */
-function speakersFor(c){ return c.cast.map(k => ({names:aliasesOf(k), color:k.color})); }
+function pcAliases(c, s){ const n = pcName(c, s).trim(), p = n.split(/\s+/); return [...new Set([n, p[p.length - 1]].filter(Boolean))]; }
+function speakersFor(c, s){
+  const sp = c.cast.map(k => ({names:aliasesOf(k), color:k.color}));
+  if(S.pcGuard && s !== undefined) sp.push({names:pcAliases(c, s), color:0, pc:true});
+  return sp;
+}
+/* PC가 말한 대사, PC가 주어인 문장을 찾음 */
+function detectPc(text, c, s){
+  text = displayText(text);
+  const pcN = pcAliases(c, s), hits = [];
+  const sp = speakersFor(c, s);
+  let speaker = null;
+  text.split('\n').forEach(line => {
+    const re = /"[^"\n]+"|“[^”\n]+”|「[^」\n]+」|『[^』\n]+』/g;
+    const quotes = [...line.matchAll(re)];
+    let last = 0;
+    quotes.forEach((mm, qi) => {
+      const before = line.slice(last, mm.index);
+      let f = findSpeaker(before, sp);
+      if(!f && !before.replace(/[*\s]/g, '')){ const nx = quotes[qi + 1]; f = findSpeaker(line.slice(mm.index + mm[0].length, nx ? nx.index : line.length), sp); }
+      if(f) speaker = f;
+      if(speaker && speaker.pc) hits.push(mm[0]);
+      last = mm.index + mm[0].length;
+    });
+    const tail = line.slice(last); const f2 = findSpeaker(tail, sp); if(f2) speaker = f2;
+  });
+  const subj = new RegExp('(^|[^가-힣])(' + pcN.map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(이|가|은|는|께서)\\s', '');
+  text.replace(/["“「『][^"”」』\n]*["”」』]/g, ' ').split(/(?<=[.!?…。])\s+|\n+/).forEach(sen => {
+    const t = sen.replace(/\*/g, '').trim();
+    if(t && subj.test(t)) hits.push(t);
+  });
+  return [...new Set(hits)];
+}
 function findSpeaker(text, sp){
   let best = null, bestPos = -1, bestSubj = false;
   for(const x of sp){
@@ -1191,7 +1337,7 @@ function fmtAI(t, sp){
       qi++;
       if(f) speaker = f;
       out += fmtInline(before);
-      out += speaker ? '<span class="say" style="--sc:var(--k' + speaker.color + ')">' + fmtInline(mm[0]) + '</span>' : fmtInline(mm[0]);
+      out += speaker ? '<span class="say' + (speaker.pc ? ' pcsay' : '') + '" style="--sc:var(--' + (speaker.pc ? 'ink' : 'k' + speaker.color) + ')">' + fmtInline(mm[0]) + '</span>' : fmtInline(mm[0]);
       last = mm.index + mm[0].length;
     }
     const tail = line.slice(last);
@@ -1239,12 +1385,23 @@ function recentSlice(s, prior){
   if(sl.length > S.maxRecent) sl = sl.slice(-S.maxRecent);
   return sl;
 }
+function skipPrompt(m){
+  return '[시간 건너뛰기(OOC): 장면을 ' + m.skipTo + '(으)로 넘긴다.' + (m.skipNote ? ' 그 사이 있었던 일: ' + m.skipNote + '.' : '')
+    + ' 건너뛴 사이의 일은 한두 문장으로 짧게 정리하고, 새 시점의 장면을 연다.]';
+}
+function eventsFor(s, prior){
+  const t = turnCount(prior);
+  return (s.events || []).filter(e => e.status !== 'done').map(e => {
+    const due = e.status === 'due' || (e.mode === 'turns' && t >= e.at + e.turns);
+    return Object.assign({}, e, {due});
+  }).filter(e => e.due || e.mode === 'story');
+}
 const LEN_TXT = {short:'짧게. 1~2문단으로, 장면을 크게 진전시키지 않는다', normal:'보통. 3~4문단', long:'길게. 5문단 이상으로 묘사와 전개를 충분히'};
 const MODE_TXT = {dialogue:'대사 위주. 묘사는 꼭 필요한 만큼만', balance:'대사와 묘사를 고르게', narration:'묘사 위주. 분위기, 행동, 내면 묘사를 풍부하게'};
 function buildContext(s, prior, extra, direction){
   const c = charOf(s);
   let h = recentSlice(s, prior).filter(m => m.text && m.text.trim())
-    .map(m => ({role: m.role === 'user' ? 'user' : 'assistant', text: m.text}));
+    .map(m => ({role: m.role === 'user' ? 'user' : 'assistant', text: m.kind === 'skip' ? skipPrompt(m) : m.text}));
   if(!h.length) h.push({role:'user', text: expand(START, c)});
   else if(h[0].role !== 'user') h.unshift({role:'user', text: s.mem.chunks.length ? CONT : '(이야기를 시작한다.)'});
   if(extra) h.push({role:'user', text: expand(extra, c)});
@@ -1278,6 +1435,9 @@ function systemParts(s, prior, extra){
   const secs = secretList(c, s);
   if(secs.length) parts.push('[비밀과 떡밥 — 상태를 지켜라]\n숨김 상태인 비밀은 이야기 속에서 자연스러운 계기 없이 드러내지 않는다. 아는 사람으로 적힌 인물만 그 사실을 안다.\n'
     + secs.map(x => '- ' + x.title + (x.detail ? ': ' + x.detail : '') + ' (상태: ' + SECRET_LABEL[x.st.status] + ' · 아는 사람: ' + (x.st.knownBy || '없음') + ')').join('\n'));
+  const evs = eventsFor(s, prior);
+  if(evs.length) parts.push('[예약된 사건 — 진행자만 아는 계획]\n조건이 맞으면 자연스러운 계기를 만들어 일으킨다. 억지로 끼워 넣거나 미리 암시하지 않는다. 사건이 일어난 답변에는 맨 끝에 [[사건: 번호]]를 한 줄 붙인다(화면에 보이지 않음).\n'
+    + evs.map(e => '- E' + e.n + ': ' + e.text + ' (조건: ' + (e.due ? '지금. 이번 답변이나 늦어도 두세 답변 안에 자연스럽게' : e.story + (e.atScene ? '. 예약 당시 장면 시간: ' + e.atScene : '')) + ')').join('\n'));
   const lore = triggeredLore(c, recentTexts).filter(l => !l.pin);
   if(lore.length) parts.push('[관련 설정]\n' + lore.map(l => '- ' + (l.keys ? l.keys.split(/[,，]/)[0].trim() + ': ' : '') + expand(l.text, c, s)).join('\n'));
   if(m.chunks.length || (m.state && m.state.trim()) || (m.pinned && m.pinned.trim())){
@@ -1493,7 +1653,13 @@ async function generate(opt){
   }finally{
     clearInterval(tick);
     busy = false; streamingId = null; abortCtl = null;
-    const sp = splitScene(am.text); am.text = sp.text;
+    const ev = takeEvents(am.text);
+    const sp = splitScene(ev.text); am.text = sp.text;
+    if(am.text && ev.ids.length){
+      const fired = (s.events || []).filter(e => ev.ids.includes(e.n) && e.status !== 'done');
+      fired.forEach(e => { e.status = 'done'; e.doneTurn = turnCount(msgs); });
+      if(fired.length) setTimeout(() => toast('예약한 사건이 일어났어요: ' + fired.map(e => e.text).join(', '), 4500), 300);
+    }
     if(am.text) am.scene = sp.scene || (target ? prevScene : null) || null;
     if(target){
       if(am.text){ am.alts.push(am.text); am.altScenes.push(am.scene); am.ai = am.alts.length - 1; }
@@ -1503,8 +1669,16 @@ async function generate(opt){
     }
     touch(s); renderLog(); renderHeader();
   }
+  if(ok && S.pcGuard && S.pcAuto && !opt.autoRetried){
+    const last = s.msgs[s.msgs.length - 1];
+    if(last && last.role === 'assistant' && detectPc(last.text, charOf(s), s).length){
+      toast('PC를 대신 쓴 부분이 있어서 한 번 다시 생성해요', 3000);
+      return generate({target:last, direction:pcFixDir(s), autoRetried:true});
+    }
+  }
   if(ok) maybeSummarize(s);
 }
+function pcFixDir(s){ const n = pcName(charOf(s), s); return n + '의 대사, 행동, 생각을 쓰지 않는다. 다른 인물의 반응까지만 쓰고 ' + n + '가 반응할 여지를 남긴다'; }
 function ready(){
   if(missingKey()){ toast(S.provider === 'custom' ? 'API 주소를 입력해 주세요' : 'API 키를 먼저 입력해 주세요'); openSheet('shSet'); return false; }
   return true;
@@ -1718,6 +1892,8 @@ $('#log').addEventListener('click', e => {
   const act = btn.dataset.act;
   if(act === 'copy') copyText(m.text);
   else if(act === 'reroll') reroll();
+  else if(act === 'pcfix'){ if(busy || !ready()) return; generate({target:m, direction:pcFixDir(s)}); }
+  else if(act === 'pcok'){ m.pcOk = true; touch(s); renderLog(true); }
   else if(act === 'askre'){
     const old = msgEl.querySelector('.askbox'); if(old){ old.remove(); return; }
     const box = document.createElement('div'); box.className = 'askbox';
@@ -1781,7 +1957,8 @@ function branchFrom(s, m){
   const ns = {id:uid(), charId:c.id, pcId:s.pcId || '', title: s.title + ' 분기', created:Date.now(), updated:Date.now(),
     msgs: JSON.parse(JSON.stringify(s.msgs.slice(0, i + 1))), mem: JSON.parse(JSON.stringify(s.mem)), draft:'',
     scene: s.scene ? JSON.parse(JSON.stringify(s.scene)) : null, secretState: JSON.parse(JSON.stringify(s.secretState || {})),
-    extraSecrets: JSON.parse(JSON.stringify(s.extraSecrets || [])), style: Object.assign({}, s.style)};
+    extraSecrets: JSON.parse(JSON.stringify(s.extraSecrets || [])), style: Object.assign({}, s.style),
+    events: JSON.parse(JSON.stringify(s.events || [])), ooc: []};
   const ui = uptoIdx(s);
   if(ui > i){
     const keepTurns = turnCount(s.msgs, i);
@@ -1811,6 +1988,9 @@ function openSheet(id){
   if(id === 'shMem') fillMem();
   if(id === 'shNote') fillNote();
   if(id === 'shScene') fillScene();
+  if(id === 'shEvent') renderEvents();
+  if(id === 'shOoc') renderOoc();
+  if(id === 'shSkip'){ $('#skTo').value = ''; $('#skNote').value = ''; }
   if(id === 'shStyle') fillStyle();
   if(id === 'shSecret'){ $('#secFound').textContent = ''; renderSecrets(); }
   if(id === 'shPc') renderPcs();
@@ -1828,7 +2008,7 @@ function closeSheet(id){
 function popTop(){
   const id = stack.pop(); if(!id) return;
   document.getElementById(id).classList.remove('open');
-  if(['shSet','shMem','shNote','shPc','shScene','shStyle','shSecret'].includes(id)){ renderHeader(); if(id !== 'shMem') renderLog(true); }
+  if(['shSet','shMem','shNote','shPc','shScene','shStyle','shSecret','shEvent'].includes(id)){ renderHeader(); if(id !== 'shMem') renderLog(true); }
   if(id === 'shPc'){ if(stack.includes('shEdit')) fillEdPc(); if(stack.includes('shNote')) fillNote(); if(stack.includes('shSet')) fillDefPc(); }
 }
 window.addEventListener('popstate', () => { if(stack.length) popTop(); });
@@ -2308,6 +2488,170 @@ $('#secFound').addEventListener('click', e => {
   $('#secFound').textContent = ''; touch(s); renderSecrets(); toast('비밀 목록에 추가했어요');
 });
 
+/* ================= 사건 예약 ================= */
+let evMode = 'turns';
+$('#evMode').addEventListener('click', e => {
+  const b = e.target.closest('[data-v]'); if(!b) return;
+  evMode = b.dataset.v;
+  $('#evMode').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  $('#evTurns').hidden = evMode !== 'turns'; $('#evStory').hidden = evMode !== 'story';
+});
+function renderEvents(){
+  const s = cur(), box = $('#evList'), t = turnCount(s.msgs); box.textContent = '';
+  if(!s.events.length){ box.innerHTML = '<div class="hint">예약한 사건이 없어요.</div>'; return; }
+  s.events.slice().reverse().forEach(e => {
+    const due = e.status === 'due' || (e.status !== 'done' && e.mode === 'turns' && t >= e.at + e.turns);
+    const label = e.status === 'done' ? '일어남' : due ? '때가 됨' : '대기';
+    const when = e.mode === 'turns' ? (e.turns ? e.turns + '턴 뒤 (' + (e.at + e.turns) + '턴째)' : '바로') : e.story;
+    const d = document.createElement('div'); d.className = 'card'; d.dataset.eid = e.id;
+    d.innerHTML = '<div class="card-head"><b>E' + e.n + '</b><span class="ev-state' + (e.status === 'done' ? ' done' : due ? ' due' : '') + '">' + label + '</span></div>'
+      + '<div style="white-space:pre-wrap">' + esc(e.text) + '</div><div class="hint">조건: ' + esc(when) + (e.status === 'done' && e.doneTurn ? ' · ' + e.doneTurn + '턴째에 일어남' : '') + '</div>'
+      + '<div class="btns">' + (e.status === 'done' ? '<button class="btn sm" type="button" data-ef="reset">다시 대기로</button>' : (due ? '' : '<button class="btn sm" type="button" data-ef="now">지금 일으키기</button>') + '<button class="btn sm" type="button" data-ef="done">일어난 걸로 표시</button>')
+      + '<button class="btn sm danger" type="button" data-ef="del">삭제</button></div>';
+    box.appendChild(d);
+  });
+}
+$('#evAdd').onclick = () => {
+  const s = cur(), text = $('#evText').value.trim();
+  if(!text){ toast('일어날 사건을 적어 주세요'); $('#evText').focus(); return; }
+  const story = $('#evStory').value.trim();
+  if(evMode === 'story' && !story){ toast('조건을 적어 주세요'); $('#evStory').focus(); return; }
+  const n = s.events.reduce((a, e) => Math.max(a, e.n), 0) + 1, sc = currentScene(s);
+  s.events.push({id:uid(), n, text, mode:evMode, turns:Math.max(0, parseInt($('#evTurns').value, 10) || 0), story, at:turnCount(s.msgs), atScene:sc ? [sc.time, sc.place].filter(Boolean).join(', ') : '', status:'wait'});
+  $('#evText').value = ''; $('#evStory').value = '';
+  touch(s); renderEvents(); toast('사건을 예약했어요');
+};
+$('#evList').addEventListener('click', e => {
+  const b = e.target.closest('[data-ef]'); if(!b) return;
+  const s = cur(), ev = s.events.find(x => x.id === b.closest('[data-eid]').dataset.eid); if(!ev) return;
+  const f = b.dataset.ef;
+  if(f === 'now') ev.status = 'due';
+  if(f === 'done'){ ev.status = 'done'; ev.doneTurn = turnCount(s.msgs); }
+  if(f === 'reset'){ ev.status = 'wait'; ev.at = turnCount(s.msgs); ev.doneTurn = 0; }
+  if(f === 'del'){ if(!armConfirm(b, '한 번 더', '삭제', 2500)) return; s.events = s.events.filter(x => x !== ev); }
+  touch(s); renderEvents();
+});
+
+/* ================= 시간 건너뛰기 ================= */
+$('#skQuick').addEventListener('click', e => { const b = e.target.closest('button'); if(b){ $('#skTo').value = b.textContent; } });
+$('#skGo').onclick = async () => {
+  const to = $('#skTo').value.trim();
+  if(!to){ toast('어디로 건너뛸지 골라 주세요'); return; }
+  if(busy || !ready()) return;
+  const s = cur(), note = $('#skNote').value.trim();
+  s.msgs.push({id:uid(), role:'user', kind:'skip', skipTo:to, skipNote:note, text:'(시간 건너뛰기: ' + to + (note ? ' — ' + note : '') + ')'});
+  touch(s); closeSheet('shSkip'); renderLog(); renderHeader();
+  await generate();
+};
+
+/* ================= OOC 질문 ================= */
+let oocBusy = false;
+function renderOoc(){
+  const s = cur(), box = $('#oocLog');
+  box.innerHTML = s.ooc.length ? s.ooc.map((x, i) => '<div class="ooc-q">' + esc(x.q) + '</div><div class="ooc-a">' + esc(x.a)
+    + (x.a && x.a !== '…' ? '<div class="btns"><button class="btn sm" type="button" data-oi="' + i + '" data-of="note">진행 메모로</button><button class="btn sm" type="button" data-oi="' + i + '" data-of="pin">유저 노트에 추가</button><button class="btn sm" type="button" data-oi="' + i + '" data-of="copy">복사</button></div>' : '') + '</div>').join('')
+    : '<div class="hint">아직 질문이 없어요.</div>';
+}
+$('#oocSend').onclick = async () => {
+  const q = $('#oocQ').value.trim(); if(!q || oocBusy) return;
+  if(!ready()) return;
+  const s = cur(), msgs = s.msgs;
+  const item = {q, a:'…', at:Date.now()}; s.ooc.push(item); if(s.ooc.length > 30) s.ooc.splice(0, s.ooc.length - 30);
+  $('#oocQ').value = ''; renderOoc(); oocBusy = true; $('#oocSend').disabled = true;
+  try{
+    const sys = systemText(s, msgs).replace(/\[장면 기록 — 출력 형식\][\s\S]*$/, '').replace(/\[예약된 사건 — 진행자만 아는 계획\]/, '[예약된 사건 — 진행자만 아는 계획(질문자에게는 알려도 됨)]');
+    const hist = buildContext(s, msgs).map(x => Object.assign({}, x));
+    const last = hist[hist.length - 1];
+    const qtext = '[OOC 질문 — 이야기 밖에서 진행자에게]\n' + q + '\n\n이야기를 이어 쓰지 말고, 진행자로서 이야기 밖에서 짧고 분명하게 답한다. 설정과 지금까지의 진행을 근거로 답하고, 아직 정해지지 않은 부분은 그렇다고 말한 뒤 가능한 방향을 제안한다.';
+    if(last.role === 'user') last.text += '\n\n' + qtext; else hist.push({role:'user', text:qtext});
+    const out = await complete(sys, hist, {quiet:true, temp:0.7});
+    item.a = splitScene(takeEvents(out).text).text || '(빈 답변)';
+  }catch(err){ item.a = '답을 받지 못했어요. ' + (err && err.message ? err.message : ''); }
+  finally{ oocBusy = false; $('#oocSend').disabled = false; touch(s); renderOoc(); }
+};
+$('#oocLog').addEventListener('click', e => {
+  const b = e.target.closest('[data-of]'); if(!b) return;
+  const s = cur(), x = s.ooc[+b.dataset.oi]; if(!x) return;
+  if(b.dataset.of === 'copy') copyText(x.a);
+  if(b.dataset.of === 'note'){ s.mem.note = x.a; touch(s); toast('진행 메모로 넣었어요. 다음 답변에 반영돼요'); }
+  if(b.dataset.of === 'pin'){ s.mem.pinned = (s.mem.pinned ? s.mem.pinned.trim() + '\n' : '') + x.a; touch(s); toast('유저 노트(이 대화)에 추가했어요'); }
+});
+$('#oocClear').onclick = e => { if(!armConfirm(e.currentTarget, '한 번 더', '질문 기록 지우기', 2500)) return; const s = cur(); s.ooc = []; touch(s); renderOoc(); };
+
+/* ================= 세이브 링크·코드 ================= */
+const b64url = buf => { const a = new Uint8Array(buf); let str = ''; for(let i = 0; i < a.length; i += 0x8000) str += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+async function encodeSave(obj){
+  const buf = await new Response(new Blob([JSON.stringify(obj)]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer();
+  return 'IBG1.' + b64url(buf);
+}
+async function decodeSave(code){
+  code = String(code || '').trim();
+  const h = code.indexOf('#save='); if(h >= 0) code = code.slice(h + 6);
+  code = decodeURIComponent(code).replace(/\s+/g, '');
+  if(code.startsWith('{')) return JSON.parse(code);
+  if(!code.startsWith('IBG1.')) throw new Error('세이브 코드가 아니에요');
+  let b = code.slice(5).replace(/-/g, '+').replace(/_/g, '/'); while(b.length % 4) b += '=';
+  const bytes = Uint8Array.from(atob(b), ch => ch.charCodeAt(0));
+  const txt = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+  return JSON.parse(txt);
+}
+let pendingSave = null;
+function describeSave(d){
+  if(!d || d.app !== 'ibanggi') return null;
+  if(d.kind === 'pack') return {full:false, text:'캐릭터: ' + (d.chars || []).map(c => c.name).join(', ') + ((d.pcs || []).length ? '<br>PC: ' + d.pcs.map(p => p.name).join(', ') : '')};
+  if(Array.isArray(d.chars)) return {full:true, text:'전체 세이브 · 캐릭터 ' + d.chars.length + '개, 대화 ' + Object.keys(d.sessions || {}).length + '개'};
+  return null;
+}
+function showSavePreview(d){
+  const info = describeSave(d);
+  if(!info){ $('#savePreview').innerHTML = '<div class="hint" style="margin-bottom:12px;color:var(--danger)">이 앱의 세이브가 아니에요.</div>'; return; }
+  pendingSave = d;
+  $('#savePreview').innerHTML = '<div class="card" style="margin-bottom:16px"><b>' + info.text + '</b>'
+    + '<div class="hint">' + (info.full ? '지금 이 기기의 캐릭터와 대화를 모두 이 세이브로 바꿔요. API 키와 잠금 설정은 그대로 둬요.' : '지금 데이터는 그대로 두고 캐릭터와 PC를 더해요. 같은 캐릭터가 있으면 설정만 새것으로 바꾸고 대화는 남겨요.') + '</div>'
+    + '<div class="btns"><button class="btn primary" type="button" id="saveApply">' + (info.full ? '이 세이브로 바꾸기' : '가져오기') + '</button></div></div>';
+}
+async function applySaveData(d){
+  if(d.kind === 'pack') return importPack(d);
+  applyBackup(d); return null;
+}
+$('#savePreview').addEventListener('click', async e => {
+  if(e.target.id !== 'saveApply' || !pendingSave) return;
+  const d = pendingSave; pendingSave = null;
+  const msg = await applySaveData(d);
+  closeSheet('shSave'); closeSheet('shChars');
+  toast(msg || '세이브를 적용했어요', 4500);
+});
+$('#saveCheck').onclick = async () => {
+  try{ showSavePreview(await decodeSave($('#saveCode').value)); }
+  catch(err){ $('#savePreview').innerHTML = '<div class="hint" style="margin-bottom:12px;color:var(--danger)">코드를 읽지 못했어요. 처음부터 끝까지 빠짐없이 붙여 넣었는지 확인해 주세요.</div>'; }
+};
+$('#saveFilePick').onclick = () => $('#packFile').click();
+function openSaveSheet(){ pendingSave = null; $('#savePreview').textContent = ''; $('#saveCode').value = ''; openSheet('shSave'); }
+async function checkSaveHash(){
+  if(!/^#save=/.test(location.hash)) return;
+  const code = location.hash;
+  try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+  openSaveSheet();
+  try{ showSavePreview(await decodeSave(code)); }
+  catch(err){ $('#savePreview').innerHTML = '<div class="hint" style="margin-bottom:12px;color:var(--danger)">세이브 링크를 읽지 못했어요. 링크가 잘렸을 수 있어요. 코드를 붙여 넣어 보세요.</div>'; }
+}
+$('#edLink').onclick = async () => {
+  const c = state.chars.find(x => x.id === editId); if(!c) return;
+  try{
+    const code = await encodeSave(packOf(c));
+    await copyText(location.origin + location.pathname + '#save=' + code);
+    toast('세이브 링크를 복사했어요. 다른 기기에서 열면 바로 가져올 수 있어요', 4000);
+  }catch(e){ toast('세이브 링크를 만들지 못했어요'); }
+};
+$('#bkCode').onclick = async () => {
+  try{
+    const data = JSON.parse(JSON.stringify(state)); data.app = 'ibanggi'; data.settings.keys = {};
+    const code = await encodeSave(data);
+    await copyText(code);
+    toast('전체 세이브 코드를 복사했어요 (' + Math.round(code.length / 1024) + 'KB). 다른 기기의 가져오기에 붙여 넣으면 돼요', 5000);
+  }catch(e){ toast('세이브 코드를 만들지 못했어요'); }
+};
+
 /* ================= 유저 노트 ================= */
 function fillNote(){
   const s = cur(), c = charOf(s);
@@ -2363,11 +2707,12 @@ async function readPackFile(f){
   if(Array.isArray(d.chars)) return importPack({chars:d.chars.map(c => Object.assign({}, c)), pcs:d.pcs || []});
   throw new Error('형식');
 }
-$('#packImport').onclick = () => $('#packFile').click();
+$('#packImport').onclick = () => openSaveSheet();
 $('#packFile').onchange = async e => {
   const f = e.target.files[0]; e.target.value = ''; if(!f) return;
-  try{ const msg = await readPackFile(f); closeSheet('shChars'); toast(msg, 4000); }
-  catch(err){ toast('이 앱의 캐릭터 파일이나 백업 파일이 아니에요'); }
+  if(!$('#shSave').classList.contains('open')) openSaveSheet();
+  try{ const t = await f.text(); showSavePreview(t.trim().startsWith('IBG1.') ? await decodeSave(t) : JSON.parse(t)); }
+  catch(err){ $('#savePreview').innerHTML = '<div class="hint" style="margin-bottom:12px;color:var(--danger)">이 파일은 읽을 수 없어요 (' + esc(f.name) + '). 이 앱에서 만든 캐릭터 파일, 백업 파일, 세이브 코드만 가져올 수 있어요.</div>'; }
 };
 
 /* ================= 메뉴 ================= */
@@ -2391,6 +2736,9 @@ $('#cNote').onclick = () => openSheet('shNote');
 $('#cStyle').onclick = () => openSheet('shStyle');
 $('#mSecret').onclick = () => openSheet('shSecret');
 $('#sceneBar').onclick = () => openSheet('shScene');
+$('#mEvent').onclick = () => openSheet('shEvent');
+$('#cSkip').onclick = () => { if(!busy) openSheet('shSkip'); };
+$('#cOoc').onclick = () => openSheet('shOoc');
 
 /* ================= 설정 ================= */
 function fillSettings(){
@@ -2414,7 +2762,7 @@ function fillSettings(){
   $('#fInterval').value = S.interval; $('#fRecent').value = S.maxRecent; $('#fCompact').value = S.compactChars;
   $('#fAutoBk').checked = !!S.autoBackup;
   $('#fFont').value = S.font; $('#fontVal').textContent = S.font + 'px';
-  $('#fEnter').checked = !!S.enterSend; $('#fScene').checked = !!S.sceneTrack;
+  $('#fEnter').checked = !!S.enterSend; $('#fScene').checked = !!S.sceneTrack; $('#fPcGuard').checked = !!S.pcGuard; $('#fPcAuto').checked = !!S.pcAuto;
   fillDefPc();
   $('#modelList').textContent = '';
   renderLockState();
@@ -2463,6 +2811,8 @@ $('#fAutoBk').onchange = e => { S.autoBackup = e.target.checked; setS(); };
 $('#fFont').oninput = e => { S.font = Number(e.target.value); $('#fontVal').textContent = S.font + 'px'; applyFont(); setS(); };
 $('#fEnter').onchange = e => { S.enterSend = e.target.checked; setS(); };
 $('#fScene').onchange = e => { S.sceneTrack = e.target.checked; setS(); };
+$('#fPcGuard').onchange = e => { S.pcGuard = e.target.checked; setS(); renderLog(true); };
+$('#fPcAuto').onchange = e => { S.pcAuto = e.target.checked; setS(); };
 function fillDefPc(){ $('#fDefPc').innerHTML = pcOptions(S.defaultPc, state.pcs.length ? '정하지 않음' : 'PC 없음'); }
 $('#fDefPc').onchange = e => { S.defaultPc = e.target.value; setS(); renderLog(true); };
 $('#fPcList').onclick = () => openSheet('shPc');
@@ -2545,9 +2895,14 @@ $('#bkImport').onclick = () => $('#bkFile').click();
 $('#bkFile').onchange = async e => {
   const f = e.target.files[0]; e.target.value = ''; if(!f) return;
   try{
-    const d = JSON.parse(await f.text());
+    const t = await f.text();
+    const d = t.trim().startsWith('IBG1.') ? await decodeSave(t) : JSON.parse(t);
     if(d && d.app === 'ibanggi' && d.kind === 'pack'){ toast(importPack(d), 4000); return; }
     if(!d || d.app !== 'ibanggi' || !Array.isArray(d.chars)) throw new Error('형식');
+    applyBackup(d);
+  }catch(err){ toast('이 앱의 백업 파일이 아니에요 (' + f.name + ')', 4000); }
+};
+function applyBackup(d){
     let st;
     if(d.v === 2 || d.sessions){ st = d; }
     else {
@@ -2557,10 +2912,9 @@ $('#bkFile').onchange = async e => {
     const keys = S.keys, relock = S.relockMin;
     delete st.notice;
     state = normalize(st); S = state.settings; S.keys = keys; S.relockMin = relock; S.lastBackup = Date.now();
-    persist(true); applyFont(); fillSettings(); renderAll(); checkBackupReminder();
+    persist(true); applyFont(); if($('#shSet').classList.contains('open')) fillSettings(); renderAll(); checkBackupReminder();
     toast(state.notice ? '백업을 불러왔어요. ' + state.notice : '백업을 불러왔어요', 5000); delete state.notice;
-  }catch(err){ toast('이 앱의 백업 파일이 아니에요'); }
-};
+}
 $('#bkWipe').onclick = async e => {
   if(!armConfirm(e.currentTarget, '한 번 더 누르면 전부 삭제', '모든 데이터 삭제')) return;
   state = null;
@@ -2591,8 +2945,10 @@ async function start(){
   $('#lock').hidden = true;
   if(state.notice){ const n = state.notice; delete state.notice; persist(); setTimeout(() => toast(n, 5000), 600); }
   checkBackupReminder();
+  checkSaveHash();
   try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
 }
+window.addEventListener('hashchange', () => { if(state) checkSaveHash(); });
 async function tryUnlock(){
   const btn = $('#lockBtn'), msg = $('#lockMsg');
   btn.disabled = true; msg.textContent = '';
