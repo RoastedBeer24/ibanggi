@@ -1836,7 +1836,7 @@ function buildContext(s, prior, extra, direction){
 }
 function triggeredLore(c, texts){
   const hay = texts.join('\n').toLowerCase();
-  return c.lore.filter(l => l.text.trim() && (l.always || l.keys.split(/[,，]/).map(k => k.trim().toLowerCase()).filter(Boolean).some(k => hay.includes(k))));
+  return c.lore.filter(l => l.text.trim() && (l.always || l.keys.split(/[,，]/).map(k => k.trim().toLowerCase()).filter(k => k.length >= 2).some(k => hay.includes(k))));
 }
 function systemText(s, prior, extra){ const p = systemParts(s, prior, extra); return p.rest ? p.head + '\n\n' + p.rest : p.head; }
 function systemParts(s, prior, extra){
@@ -1851,8 +1851,8 @@ function systemParts(s, prior, extra){
   if(ac.off.length && c.cast.length > BIG_CAST){
     const groups = {};
     ac.off.forEach(k => { const g = k.group || '기타'; (groups[g] = groups[g] || []).push(k.name + (k.aliases ? '(' + k.aliases.split(/[,，]/)[0].trim() + ')' : '')); });
-    parts.push('[등장인물 명단 — 지금 장면에 없는 인물. 장소와 상황에 맞을 때만 자연스럽게 등장시킨다. 등장시키면 다음 답변부터 자세한 설정이 함께 온다]\n' + Object.keys(groups).map(g => '- ' + g + ': ' + groups[g].join(', ')).join('\n'));
-  } else if(ac.off.length) parts.push('[그 밖의 인물 — 지금 장면에 없음. 부르거나 자연스러운 계기가 있을 때만 등장]\n' + ac.off.map(k => '- ' + k.name + (k.short ? ': ' + expand(k.short, c, s) : '')).join('\n'));
+    parts.push('[등장인물 명단 — 참고용. 지금 장면에 없는 인물이다. PC가 찾아가거나 부르거나, 그 장소에 당연히 있을 때만 등장한다. 장면을 채우려고 일부러 새 인물을 끌어들이지 않는다]\n' + Object.keys(groups).map(g => '- ' + g + ': ' + groups[g].join(', ')).join('\n'));
+  } else if(ac.off.length) parts.push('[그 밖의 인물 — 지금 장면에 없음. PC가 찾거나 부를 때, 또는 그 장소에 당연히 있을 때만 등장한다. 일부러 끌어들이지 않는다]\n' + ac.off.map(k => '- ' + k.name + (k.short ? ': ' + expand(k.short, c, s) : '')).join('\n'));
   const sc = currentScene(s);
   if(sc && (sc.time || sc.place || sc.people.length)) parts.push('[현재 장면]\n' + (sc.time ? '시간: ' + sc.time + '\n' : '') + (sc.place ? '장소: ' + sc.place + '\n' : '') + (sc.people.length ? '장면에 있는 인물: ' + sc.people.join(', ') : ''));
   const onIds = new Set(ac.on.map(k => k.id));
