@@ -608,7 +608,10 @@ details.card .card-body{display:grid;gap:8px;padding:12px}
       <div class="field"><span class="lbl">문체</span><div class="seg" id="stMode">
         <button type="button" data-v="auto">자동</button><button type="button" data-v="dialogue">대사 위주</button><button type="button" data-v="balance">균형</button><button type="button" data-v="narration">묘사 위주</button>
       </div></div>
-      <div class="hint">이 대화에만 적용돼요. '자동'은 캐릭터 설정의 규칙을 따라요.</div>
+      <div class="field"><span class="lbl">사건 전개</span><div class="seg" id="stPace">
+        <button type="button" data-v="calm">PC 주도 (사건 안 만듦)</button><button type="button" data-v="normal">보통</button><button type="button" data-v="active">사건 많이</button>
+      </div></div>
+      <div class="hint">이 대화에만 적용돼요. 길이·문체의 '자동'은 캐릭터 설정의 규칙을 따라요. 사건 전개는 기본이 'PC 주도'예요.</div>
     </div>
   </div>
 </section>
@@ -1296,7 +1299,7 @@ function normalize(st){
     secrets:Array.isArray(c.secrets) ? c.secrets.map(x => ({id:String(x.id || uid()), title:String(x.title || ''), detail:String(x.detail || ''), knownBy0:String(x.knownBy0 || ''), owner:String(x.owner || '')})) : [],
     img:String(c.img || ''), promptBackup:String(c.promptBackup || ''),
     status:Array.isArray(c.status) ? c.status.map(x => ({id:String(x.id || uid()), label:String(x.label || ''), hint:String(x.hint || '')})).filter(x => x.label.trim()) : [],
-    affinity:!!c.affinity, theme:/^#[0-9a-f]{6}$/i.test(c.theme || '') ? c.theme : '',
+    affinity:!!c.affinity, openings:Array.isArray(c.openings) ? c.openings.slice(-8).map(String) : [], theme:/^#[0-9a-f]{6}$/i.test(c.theme || '') ? c.theme : '',
     session:c.session || null
   }));
   if(!st.sessions || typeof st.sessions !== 'object') st.sessions = {};
@@ -1764,7 +1767,21 @@ function avHTML(img, text, extraCls, color){
 
 /* ================= 보낼 내용 만들기 ================= */
 const START = '(이야기를 시작한다. {{user}}의 설정에 맞춰 첫 장면을 열어 줘.)';
-const CONT = '(이어서 진행해 줘.)';
+const CONT = '(이어서 진행해 줘. 새 사건을 만들지 말고, 지금 장면에서 인물들이 하던 대화와 행동을 자연스럽게 이어 간다.)';
+const SEED_TIME = ['이른 아침','늦은 오전','한낮','나른한 오후','해 질 녘','저녁 식사 무렵','늦은 밤','비 오는 날','바람 부는 날','쉬는 날'];
+const SEED_MOOD = ['아무 일 없는 평범한 일상의 한 순간','가벼운 농담이 오가는 느슨한 분위기','조금 어색하고 서먹한 분위기','은근히 설레는 분위기','둘 다 피곤해서 늘어진 분위기','조용하고 차분한 분위기','사소하고 우스운 소동(위험하지 않은)','오랜만에 다시 마주친 분위기'];
+const pick = a => a[Math.floor(Math.random() * a.length)];
+function startSeed(c, s){
+  const pool = c.cast.filter(k => k.detail && k.detail.length > 300);
+  const w = pool.map(k => Math.min(k.detail.length, 2500));
+  let r = Math.random() * w.reduce((a, b) => a + b, 0), who = null;
+  for(let i = 0; i < pool.length; i++){ r -= w[i]; if(r <= 0){ who = pool[i]; break; } }
+  const prev = (c.openings || []).slice(-6);
+  return '(이야기를 시작한다. 첫 장면을 열어 줘.\n이번 시작 조건 — 때: ' + pick(SEED_TIME) + ' / 분위기: ' + pick(SEED_MOOD)
+    + (who ? ' / 처음 함께 있을 인물: ' + who.name + '(PC와의 관계와 거리감은 설정에 맞게)' : '')
+    + '\n장소는 PC의 신분과 생활에 어울리는 곳으로 고른다. 극적인 사건, 위기, 부딪힘, 비명, 수상한 낌새, 급한 소식으로 시작하지 않는다. 장면을 짧게 열고, 인물이 PC에게 말을 건네거나 PC의 반응을 기다리는 데서 멈춘다.'
+    + (prev.length ? '\n최근에 이 세계관에서 쓴 첫 장면들과 장소·상황·첫 문장이 겹치지 않게 한다: ' + prev.map(x => '「' + x + '」').join(' ') : '') + ')';
+}
 
 function mergeTurns(h){
   const out = [];
@@ -1793,13 +1810,18 @@ function eventsFor(s, prior){
     return Object.assign({}, e, {due});
   }).filter(e => e.due || e.mode === 'story');
 }
+const PACE_TXT = {
+  calm:'PC 주도. 새 사건, 갈등, 방문자, 급한 소식을 만들지 않는다. 인물들은 먼저 PC가 방금 한 말과 행동에 직접 반응하고, 지금 장면 안에서 대화를 이어 간다. 장면을 다음으로 넘기지 않는다',
+  normal:'인물들은 먼저 PC가 방금 한 말과 행동에 직접 반응한다. 장면이 오래 멈춰 있을 때만 작고 자연스러운 변화를 준다',
+  active:'인물들은 PC의 말과 행동에 반응하되, 이야기가 멈추지 않게 사건과 갈등을 적극적으로 일으킨다'};
+const PACE_LABEL = {calm:'PC 주도', normal:'보통', active:'사건 많이'};
 const LEN_TXT = {short:'짧게. 1~2문단으로, 장면을 크게 진전시키지 않는다', normal:'보통. 3~4문단', long:'길게. 5문단 이상으로 묘사와 전개를 충분히'};
 const MODE_TXT = {dialogue:'대사 위주. 묘사는 꼭 필요한 만큼만', balance:'대사와 묘사를 고르게', narration:'묘사 위주. 분위기, 행동, 내면 묘사를 풍부하게'};
 function buildContext(s, prior, extra, direction){
   const c = charOf(s);
   let h = recentSlice(s, prior).filter(m => m.text && m.text.trim())
     .map(m => ({role: m.role === 'user' ? 'user' : 'assistant', text: m.kind === 'skip' ? skipPrompt(m) : m.kind === 'start' ? startPrompt(m) : m.text}));
-  if(!h.length) h.push({role:'user', text: expand(START, c)});
+  if(!h.length) h.push({role:'user', text: expand(startSeed(c, s), c)});
   else if(h[0].role !== 'user') h.unshift({role:'user', text: s.mem.chunks.length ? CONT : '(이야기를 시작한다.)'});
   if(extra) h.push({role:'user', text: expand(extra, c)});
   if(h[h.length-1].role !== 'user') h.push({role:'user', text: CONT});
@@ -1807,7 +1829,7 @@ function buildContext(s, prior, extra, direction){
   const note = (s.mem.note || '').trim();
   if(note){ const last = h[h.length-1]; last.text += '\n\n[진행 메모(OOC), 이번 답변에 반영: ' + expand(note, c) + ']'; }
   const st = s.style || {};
-  const fm = [st.len && LEN_TXT[st.len] ? '길이 — ' + LEN_TXT[st.len] : '', st.mode && MODE_TXT[st.mode] ? '문체 — ' + MODE_TXT[st.mode] : ''].filter(Boolean);
+  const fm = [st.len && LEN_TXT[st.len] ? '길이 — ' + LEN_TXT[st.len] : '', st.mode && MODE_TXT[st.mode] ? '문체 — ' + MODE_TXT[st.mode] : '', '전개 — ' + PACE_TXT[st.pace || 'calm']].filter(Boolean);
   if(fm.length) h[h.length-1].text += '\n\n[이번 답변 형식(OOC): ' + fm.join(' / ') + ']';
   if(direction && direction.trim()) h[h.length-1].text += '\n\n[다시 쓰기 요청(OOC): ' + direction.trim() + '. 이전 답변을 되풀이하지 말고 이 요청을 반영해 새로 쓴다.]';
   return h;
@@ -2241,6 +2263,10 @@ async function generate(opt){
       toast('PC를 대신 쓴 부분이 있어서 한 번 다시 생성해요', 3000);
       return generate({target:last, direction:pcFixDir(s), autoRetried:true});
     }
+  }
+  if(ok && !prior.some(x => x.role === 'user') && !target){
+    const c0 = charOf(s), first = lineOf(am.text).slice(0, 70);
+    if(first){ c0.openings = (c0.openings || []).concat([first]).slice(-8); persist(); }
   }
   if(ok) maybeSummarize(s);
 }
@@ -3292,16 +3318,18 @@ function updateStyleChip(){
   const st = cur().style || {}, parts = [];
   if(st.len && st.len !== 'auto') parts.push(LEN_LABEL[st.len]);
   if(st.mode && st.mode !== 'auto') parts.push(MODE_LABEL[st.mode]);
+  if(st.pace && st.pace !== 'calm') parts.push(PACE_LABEL[st.pace]);
   $('#cStyle').innerHTML = '<i>¶</i>' + esc(parts.length ? parts.join('·') : '답변 형식');
 }
 function fillStyle(){
   const st = cur().style;
   $('#stLen').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st.len)));
   $('#stMode').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st.mode)));
+  $('#stPace').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === (st.pace || 'calm'))));
 }
-['stLen','stMode'].forEach(id => $('#' + id).addEventListener('click', e => {
+['stLen','stMode','stPace'].forEach(id => $('#' + id).addEventListener('click', e => {
   const b = e.target.closest('[data-v]'); if(!b) return;
-  const s = cur(); s.style[id === 'stLen' ? 'len' : 'mode'] = b.dataset.v; touch(s); fillStyle(); updateStyleChip();
+  const s = cur(); s.style[id === 'stLen' ? 'len' : id === 'stMode' ? 'mode' : 'pace'] = b.dataset.v; touch(s); fillStyle(); updateStyleChip();
 }));
 
 /* ================= 비밀·떡밥 ================= */
