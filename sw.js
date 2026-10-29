@@ -1,5 +1,5 @@
 /* 이야기방 서비스 워커: 항상 최신 파일을 먼저 받고, 오프라인일 때만 저장본을 씀 */
-const CACHE = 'ibanggi-v17';
+const CACHE = 'ibanggi-v18';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
@@ -75,22 +75,59 @@ async function windows(){ return self.clients.matchAll({type:'window', includeUn
 function preview(t){
   return String(t || '').replace(/\[\[[\s\S]*?\]\]/g, '').replace(/\[\[[\s\S]*$/, '').replace(/[*_#>`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 90);
 }
-async function runJob(job, src){
-  const ac = new AbortController(); running.set(job.id, ac);
-  const rec = {id:job.id, meta:job.meta || {}, status:'running', text:'', usage:{}, t0:Date.now()};
-  await jput(rec);
-  const send = m => { try{ src && src.postMessage(m); }catch(e){} };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const RETRY_HTTP = [408, 425, 429, 500, 502, 503, 504, 520, 522, 524, 529];
+/* 한 번 시도: 오래 아무것도 안 오면(멈춤) 끊고 다시 시도할 수 있게 감시 */
+async function attempt(job, rec, ac, send){
+  const local = new AbortController();
+  const stop = () => local.abort();
+  ac.signal.addEventListener('abort', stop);
+  let last = Date.now(), first = false, stalled = false;
+  const dog = setInterval(() => {
+    if(Date.now() - last > (first ? 90000 : 240000)){ stalled = true; local.abort(); }
+  }, 5000);
   let saved = Date.now();
   try{
-    const r = await fetch(job.url, {method:'POST', headers:job.headers, body:job.body, signal:ac.signal});
-    if(!r.ok){ rec.status = 'httperr'; rec.http = {status:r.status, body:await r.text().catch(() => '')}; }
-    else {
-      await readSSE(r, j => {
-        const t = extract(job.kind, j, rec); if(t) rec.text += t;
-        send({type:'job-data', id:job.id, j});
-        if(Date.now() - saved > 2000){ saved = Date.now(); jput(Object.assign({}, rec)); }
-      });
-      rec.status = 'done';
+    const r = await fetch(job.url, {method:'POST', headers:job.headers, body:job.body, signal:local.signal, cache:'no-store'});
+    last = Date.now();
+    if(!r.ok) return {http:{status:r.status, body:await r.text().catch(() => '')}};
+    await readSSE(r, j => {
+      last = Date.now(); first = true;
+      const t = extract(job.kind, j, rec); if(t) rec.text += t;
+      send({type:'job-data', id:job.id, j});
+      if(Date.now() - saved > 2000){ saved = Date.now(); jput(Object.assign({}, rec)); }
+    });
+    if(stalled) throw new TypeError('응답이 오래 멈춰 있었어요');
+    return {ok:true};
+  }catch(e){
+    if(ac.signal.aborted) throw e;
+    if(stalled) return {net:true, error:'응답이 오래 멈춰 있었어요'};
+    return {net: e instanceof TypeError || (e && e.name === 'AbortError'), error:String((e && e.message) || e)};
+  }finally{
+    clearInterval(dog); ac.signal.removeEventListener('abort', stop);
+  }
+}
+async function runJob(job, src){
+  const ac = new AbortController(); running.set(job.id, ac);
+  const rec = {id:job.id, meta:job.meta || {}, status:'running', text:'', usage:{}, t0:Date.now(), tries:0};
+  await jput(rec);
+  const send = m => { try{ src && src.postMessage(m); }catch(e){} };
+  try{
+    for(let n = 0; ; n++){
+      rec.tries = n + 1;
+      const res = await attempt(job, rec, ac, send);
+      if(res.ok){ rec.status = 'done'; break; }
+      const canRetry = n < 3 && ((res.http && RETRY_HTTP.includes(res.http.status)) || res.net);
+      if(!canRetry){
+        if(res.http){ rec.status = 'httperr'; rec.http = res.http; }
+        else { rec.status = 'error'; rec.error = res.error; rec.net = !!res.net; }
+        break;
+      }
+      /* 처음부터 다시 받는다: 받은 조각은 버리고 화면에도 알림 */
+      rec.text = ''; rec.usage = {}; await jput(Object.assign({}, rec));
+      send({type:'job-reset', id:job.id, tries:n + 1});
+      await sleep([2000, 5000, 10000][n] || 10000);
+      if(ac.signal.aborted) throw new DOMException('중단됨', 'AbortError');
     }
   }catch(e){
     rec.status = e && e.name === 'AbortError' ? 'aborted' : 'error';
@@ -105,7 +142,7 @@ async function runJob(job, src){
   const n = job.notify;
   if(n && rec.status !== 'aborted' && !ws.some(c => c.visibilityState === 'visible')){
     const ok = rec.status === 'done';
-    const body = ok ? (n.preview && preview(rec.text)) || n.body || '답변이 도착했어요' : (n.failBody || '받지 못했어요. 열어서 다시 시도해 주세요');
+    const body = ok ? (n.preview && preview(rec.text)) || n.body || '답변이 도착했어요' : (n.failBody || '받지 못했어요. 열면 다시 받아 올게요');
     try{ await self.registration.showNotification(n.title || '이야기방', {body, tag:'ibanggi-' + (n.sid || job.id), renotify:true, icon:'icon-192.png', badge:'icon-192.png', data:{sid:n.sid || '', kind:(job.meta || {}).kind || ''}}); }catch(e){}
   }
 }
